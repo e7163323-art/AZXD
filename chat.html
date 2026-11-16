@@ -19,23 +19,26 @@ button:disabled{opacity:.5;cursor:default}
 </style></head><body>
 <header><b>🎈 Balloni</b><a class="dl" href="#" id="sv">⬇ שמור שיחה</a><a class="dl" href="index.html">⬇ הורד מודל</a><span>רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה</span></header>
 <div id="log"><div id="st">טוען את המודל (כ-28MB)…</div></div>
-<form id="f"><textarea id="t" placeholder="כתוב הודעה…" disabled></textarea><button id="b" disabled>שלח</button></form>
+<form id="f" onsubmit="return false"><textarea id="t" placeholder="כתוב הודעה…"></textarea><button id="b">שלח</button></form>
+<script>if(location.protocol==="file:")document.getElementById("st").innerHTML="⚠ הדף נפתח כקובץ מהמחשב ולכן המודל לא יכול להיטען. פתח אותו דרך כתובת האתר (GitHub Pages), או הרץ בתיקייה: <code dir=ltr>python -m http.server</code> ואז http://localhost:8000/chat.html";</script>
 <script type="module">
 import { Wllama } from './wllama/index.js';
 const log = document.getElementById('log'), st = document.getElementById('st'), t = document.getElementById('t'), b = document.getElementById('b');
 const wllama = new Wllama({ default: './wllama/wllama.wasm' });
-const history = [];
+const history = []; let ready = false, busy = false;
 try {
   await wllama.loadModelFromUrl(new URL('./model/balloni-00001-of-00002.gguf', location.href).href, {
     n_ctx: 2048,
     progressCallback: ({ loaded, total }) => { st.textContent = 'טוען את המודל… ' + Math.round(loaded / total * 100) + '%'; }
   });
-  st.textContent = 'מוכן. אפשר לדבר 🎈'; t.disabled = b.disabled = false; t.focus();
+  st.textContent = 'מוכן. אפשר לדבר 🎈'; ready = true; t.focus(); if (t.value.trim()) send();
 } catch (e) { st.textContent = 'שגיאה בטעינת המודל: ' + e.message; }
 function add(cls, text) { const d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
 async function send() {
   const text = t.value.trim(); if (!text) return;
-  t.value = ''; t.disabled = b.disabled = true;
+  if (!ready) { st.textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
+  if (busy) return; busy = true;
+  t.value = '';
   add('u', text); history.push({ role: 'user', content: text });
   const out = add('a', '…'); let acc = '';
   try {
@@ -46,11 +49,9 @@ async function send() {
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   if (acc) history.push({ role: 'assistant', content: acc }); else history.pop();
-  t.disabled = b.disabled = false; t.focus();
+  busy = false; t.focus();
 }
-document.getElementById('sv').onclick=e=>{e.preventDefault();const tx=history.map(m=>(m.role=='user'?'אני: ':'Balloni: ')+m.content).join('
-
-');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tx],{type:'text/plain;charset=utf-8'}));a.download='balloni-chat.txt';a.click();};
+document.getElementById('sv').onclick=e=>{e.preventDefault();const tx=history.map(m=>(m.role=='user'?'אני: ':'Balloni: ')+m.content).join(String.fromCharCode(10,10));const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tx],{type:'text/plain;charset=utf-8'}));a.download='balloni-chat.txt';a.click();};
 document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); send(); });
 t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 </script></body></html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>שיחה עם Balloni</title>
+<style>
+:root{--bg:#fff;--fg:#1f1f1d;--mut:#77756e;--card:#f0efeb;--acc:#e5484d;--bd:#e5e3dd}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--fg:#f0efeb;--mut:#a5a39b;--card:#2a2a28;--bd:#3a3a37}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column}
+header{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;gap:12px;align-items:center}
+.dl{background:var(--acc);color:#fff;text-decoration:none;padding:6px 12px;border-radius:10px;font-size:.85rem}header b{font-size:1.1rem}header span{color:var(--mut);font-size:.85rem;margin-inline-start:auto}
+#log{flex:1;overflow:auto;padding:16px;max-width:760px;width:100%;margin:0 auto}
+.m{margin:10px 0;white-space:pre-wrap;word-wrap:break-word}
+.u{background:var(--card);padding:10px 14px;border-radius:16px;width:fit-content;max-width:85%}
+form{max-width:760px;width:100%;margin:0 auto;padding:12px 16px 20px;display:flex;gap:8px}
+textarea{flex:1;resize:none;border:1px solid var(--bd);background:var(--bg);color:var(--fg);border-radius:16px;padding:12px 14px;font:inherit;height:48px}
+button{background:var(--acc);color:#fff;border:0;border-radius:14px;padding:0 20px;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+#st{color:var(--mut);font-size:.85rem;text-align:center;padding:6px}
+</style></head><body>
+<header><b>🎈 Balloni</b><a class="dl" href="#" id="sv">⬇ שמור שיחה</a><a class="dl" href="index.html">⬇ הורד מודל</a><span>רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה</span></header>
+<div id="log"><div id="st">טוען את המודל (כ-28MB)…</div></div>
+<form id="f"><textarea id="t" placeholder="כתוב הודעה…" disabled></textarea><button id="b" disabled>שלח</button></form>
+<script type="module">
+import { Wllama } from './wllama/index.js';
+const log = document.getElementById('log'), st = document.getElementById('st'), t = document.getElementById('t'), b = document.getElementById('b');
+const wllama = new Wllama({ default: './wllama/wllama.wasm' });
+const history = [];
+try {
+  await wllama.loadModelFromUrl(new URL('./model/balloni-00001-of-00002.gguf', location.href).href, {
+    n_ctx: 2048,
+    progressCallback: ({ loaded, total }) => { st.textContent = 'טוען את המודל… ' + Math.round(loaded / total * 100) + '%'; }
+  });
+  st.textContent = 'מוכן. אפשר לדבר 🎈'; t.disabled = b.disabled = false; t.focus();
+} catch (e) { st.textContent = 'שגיאה בטעינת המודל: ' + e.message; }
+function add(cls, text) { const d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
+async function send() {
+  const text = t.value.trim(); if (!text) return;
+  t.value = ''; t.disabled = b.disabled = true;
+  add('u', text); history.push({ role: 'user', content: text });
+  const out = add('a', '…'); let acc = '';
+  try {
+    const stream = await wllama.createChatCompletion({ messages: history.slice(-8), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
+    for await (const c of stream) {
+      const d = c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
+      if (d) { acc += d; out.textContent = acc; log.scrollTop = log.scrollHeight; }
+    }
+  } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
+  if (acc) history.push({ role: 'assistant', content: acc }); else history.pop();
+  t.disabled = b.disabled = false; t.focus();
+}
+document.getElementById('sv').onclick=e=>{e.preventDefault();const tx=history.map(m=>(m.role=='user'?'אני: ':'Balloni: ')+m.content).join('
+
+');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tx],{type:'text/plain;charset=utf-8'}));a.download='balloni-chat.txt';a.click();};
+document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); send(); });
+t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+</script></body></html>

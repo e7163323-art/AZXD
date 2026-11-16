@@ -1,57 +1,113 @@
 <!doctype html>
 <html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>שיחה עם Balloni</title>
+<title>Balloni</title>
+<script src="coi-serviceworker.js"></script>
 <style>
-:root{--bg:#fff;--fg:#1f1f1d;--mut:#77756e;--card:#f0efeb;--acc:#e5484d;--bd:#e5e3dd}
-@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--fg:#f0efeb;--mut:#a5a39b;--card:#2a2a28;--bd:#3a3a37}}
+:root{--bg:#fff;--side:#f7f6f3;--elev:#f0efeb;--bd:#e5e3dd;--fg:#1f1f1d;--mut:#77756e;--acc:#e5484d}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--side:#222220;--elev:#2c2c29;--bd:#3a3a37;--fg:#f0efeb;--mut:#a5a39b;--acc:#ff6369}}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
-body{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column}
-header{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;gap:12px;align-items:center}
-.dl{background:var(--acc);color:#fff;text-decoration:none;padding:6px 12px;border-radius:10px;font-size:.85rem}header b{font-size:1.1rem}header span{color:var(--mut);font-size:.85rem;margin-inline-start:auto}
-#log{flex:1;overflow:auto;padding:16px;max-width:760px;width:100%;margin:0 auto}
-.m{margin:10px 0;white-space:pre-wrap;word-wrap:break-word}
-.u{background:var(--card);padding:10px 14px;border-radius:16px;width:fit-content;max-width:85%}
-form{max-width:760px;width:100%;margin:0 auto;padding:12px 16px 20px;display:flex;gap:8px}
-textarea{flex:1;resize:none;border:1px solid var(--bd);background:var(--bg);color:var(--fg);border-radius:16px;padding:12px 14px;font:inherit;height:48px}
-button{background:var(--acc);color:#fff;border:0;border-radius:14px;padding:0 20px;font:inherit;cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
-#st{color:var(--mut);font-size:.85rem;text-align:center;padding:6px}
-</style></head><body>
-<header><b>🎈 Balloni</b><a class="dl" href="#" id="sv">⬇ שמור שיחה</a><a class="dl" href="index.html">⬇ הורד מודל</a><span>רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה</span></header>
-<div id="log"><div id="st">טוען את המודל (כ-28MB)…</div></div>
-<form id="f" onsubmit="return false"><textarea id="t" placeholder="כתוב הודעה…"></textarea><button id="b">שלח</button></form>
-<script>if(location.protocol==="file:")document.getElementById("st").innerHTML="⚠ הדף נפתח כקובץ מהמחשב ולכן המודל לא יכול להיטען. פתח אותו דרך כתובת האתר (GitHub Pages), או הרץ בתיקייה: <code dir=ltr>python -m http.server</code> ואז http://localhost:8000/chat.html";</script>
+body{font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--fg);display:flex}
+aside{width:272px;background:var(--side);display:flex;flex-direction:column;padding:14px 12px;gap:6px;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;padding:4px 8px 12px}
+.logo svg{width:26px;height:32px}
+.nb{background:var(--elev);border:0;border-radius:10px;padding:10px 12px;font:inherit;color:var(--fg);text-align:start;cursor:pointer}
+.nb:hover{filter:brightness(.97)}
+aside h4{color:var(--mut);font-weight:400;font-size:.8rem;margin:14px 8px 4px}
+#list{flex:1;overflow:auto;display:flex;flex-direction:column;gap:2px}
+#list div{padding:9px 12px;border-radius:10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}
+#list div.on,#list div:hover{background:var(--elev)}
+.foot{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--bd);padding-top:10px}
+.foot a,.foot button{color:var(--mut);text-decoration:none;font-size:.88rem;padding:6px 10px;border-radius:8px;background:none;border:0;font-family:inherit;text-align:start;cursor:pointer}
+.foot a:hover,.foot button:hover{background:var(--elev)}
+main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+#top{display:flex;align-items:center;padding:12px 18px;color:var(--mut);font-size:.85rem;gap:8px}
+#top i{width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block}#top i.ok{background:#2fbf71}
+#menu{display:none;background:none;border:0;font-size:1.4rem;color:var(--fg);cursor:pointer}
+#log{flex:1;overflow:auto;padding:8px 18px 190px}
+.col{max-width:780px;margin:0 auto}
+.m{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;line-height:1.7}
+.u{background:var(--elev);padding:10px 16px;border-radius:18px;width:fit-content;max-width:85%}
+.meta{color:var(--mut);font-size:.78rem;margin-top:-6px;display:flex;gap:14px}
+.meta a{cursor:pointer}
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding-bottom:150px;pointer-events:none}
+#empty h1{font-size:2rem;font-weight:400;margin:0;display:flex;align-items:center;gap:14px}
+#empty svg{width:40px;height:50px}
+#comp{position:absolute;left:0;right:0;bottom:18px;padding:0 18px}
+body.empty #comp{bottom:calc(50% - 110px)}
+.card{max-width:720px;margin:0 auto;background:var(--bg);border:1px solid var(--bd);border-radius:24px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px}
+textarea{width:100%;border:0;outline:0;resize:none;background:none;color:var(--fg);font:inherit;font-size:1rem;height:52px}
+.row{display:flex;align-items:center;gap:8px}
+.chip{border:1px solid var(--bd);border-radius:999px;padding:5px 14px;font-size:.85rem;color:var(--fg);background:none}
+#send{margin-inline-start:auto;width:38px;height:38px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:1.1rem;cursor:pointer}
+#st{text-align:center;color:var(--mut);font-size:.8rem;margin-top:8px}
+@media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
+</style></head><body class="empty">
+<aside id="side">
+  <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
+  <button class="nb" id="new">＋ &nbsp;חדש</button>
+  <h4>אחרונים</h4><div id="list"></div>
+  <div class="foot"><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a></div>
+</aside>
+<main>
+  <div id="top"><button id="menu">☰</button><i id="dot"></i><span id="stt">טוען מודל…</span></div>
+  <div id="empty"><h1><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg><span id="greet"></span></h1></div>
+  <div id="log"><div class="col" id="msgs"></div></div>
+  <form id="comp" onsubmit="return false"><div class="card">
+    <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
+    <div class="row"><span class="chip">Balloni (קטן)</span><span class="chip">שיחה רגילה</span><button id="send" title="שלח">↑</button></div>
+  </div><div id="st">רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
+</main>
+<script>if(location.protocol==="file:")document.getElementById("stt").innerHTML="⚠ הדף נפתח כקובץ - פתח דרך כתובת האתר או שרת מקומי";</script>
 <script type="module">
 import { Wllama } from './wllama/index.js';
-const log = document.getElementById('log'), st = document.getElementById('st'), t = document.getElementById('t'), b = document.getElementById('b');
+const $ = id => document.getElementById(id);
+const t = $('t'), msgs = $('msgs'), log = $('log');
+const h = new Date().getHours(); $('greet').textContent = (h>=5&&h<12?'בוקר טוב':h<18?'צהריים טובים':h<22?'ערב טוב':'לילה טוב') + ', מה שלומך?';
+// chats are kept only in this browser (localStorage)
+let chats = []; try { chats = JSON.parse(localStorage.getItem('balloni-chats') || '[]'); } catch {}
+let cur = { title: '', msgs: [] }, ready = false, busy = false;
+const save = () => { try { localStorage.setItem('balloni-chats', JSON.stringify(chats.slice(0, 30))); } catch {} };
+function renderList() { const l = $('list'); l.innerHTML = ''; chats.forEach(c => { const d = document.createElement('div'); d.textContent = c.title || 'שיחה חדשה'; if (c === cur) d.className = 'on'; d.onclick = () => { cur = c; show(); $('side').classList.remove('open'); }; l.appendChild(d); }); }
+function addMsg(role, text, stats) {
+  const d = document.createElement('div'); d.className = 'm' + (role === 'user' ? ' u' : ''); d.textContent = text; msgs.appendChild(d);
+  if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }
+  log.scrollTop = log.scrollHeight; return d;
+}
+function show() { msgs.innerHTML = ''; cur.msgs.forEach(m => addMsg(m.role, m.content, m.stats)); document.body.classList.toggle('empty', cur.msgs.length === 0); $('empty').style.display = cur.msgs.length ? 'none' : 'flex'; renderList(); }
+$('new').onclick = () => { cur = { title: '', msgs: [] }; show(); $('side').classList.remove('open'); t.focus(); };
+$('menu').onclick = () => $('side').classList.toggle('open');
+$('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'אני: ' : 'Balloni: ') + m.content).join(String.fromCharCode(10, 10)); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tx], { type: 'text/plain;charset=utf-8' })); a.download = 'balloni-chat.txt'; a.click(); };
+show();
+
 const wllama = new Wllama({ default: './wllama/wllama.wasm' });
-const history = []; let ready = false, busy = false;
 try {
   await wllama.loadModelFromUrl(new URL('./model/balloni-00001-of-00002.gguf', location.href).href, {
     n_ctx: 2048,
-    progressCallback: ({ loaded, total }) => { st.textContent = 'טוען את המודל… ' + Math.round(loaded / total * 100) + '%'; }
+    progressCallback: ({ loaded, total }) => { $('stt').textContent = 'טוען מודל… ' + Math.round(loaded / total * 100) + '%'; }
   });
-  st.textContent = 'מוכן. אפשר לדבר 🎈'; ready = true; t.focus(); if (t.value.trim()) send();
-} catch (e) { st.textContent = 'שגיאה בטעינת המודל: ' + e.message; }
-function add(cls, text) { const d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
+  $('stt').textContent = 'מוכן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim()) send();
+} catch (e) { $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message; }
+
 async function send() {
   const text = t.value.trim(); if (!text) return;
-  if (!ready) { st.textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
-  if (busy) return; busy = true;
-  t.value = '';
-  add('u', text); history.push({ role: 'user', content: text });
-  const out = add('a', '…'); let acc = '';
+  if (!ready) { $('stt').textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
+  if (busy) return; busy = true; t.value = '';
+  if (!cur.msgs.length) { cur.title = text.slice(0, 40); chats.unshift(cur); }
+  cur.msgs.push({ role: 'user', content: text });
+  document.body.classList.remove('empty'); $('empty').style.display = 'none';
+  addMsg('user', text); const out = addMsg('assistant', '…'); renderList();
+  let acc = '', n = 0, t0 = performance.now();
   try {
-    const stream = await wllama.createChatCompletion({ messages: history.slice(-8), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
+    const stream = await wllama.createChatCompletion({ messages: cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content })), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
     for await (const c of stream) {
       const d = c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
-      if (d) { acc += d; out.textContent = acc; log.scrollTop = log.scrollHeight; }
+      if (d) { acc += d; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; }
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
-  if (acc) history.push({ role: 'assistant', content: acc }); else history.pop();
-  busy = false; t.focus();
+  if (acc) { const stats = (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
+  else { cur.msgs.pop(); out.remove(); }
+  save(); busy = false; t.focus();
 }
-document.getElementById('sv').onclick=e=>{e.preventDefault();const tx=history.map(m=>(m.role=='user'?'אני: ':'Balloni: ')+m.content).join(String.fromCharCode(10,10));const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tx],{type:'text/plain;charset=utf-8'}));a.download='balloni-chat.txt';a.click();};
-document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); send(); });
+$('send').onclick = send;
 t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 </script></body></html>

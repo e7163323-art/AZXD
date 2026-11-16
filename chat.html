@@ -40,13 +40,20 @@ textarea{width:100%;border:0;outline:0;resize:none;background:none;color:var(--f
 .chip{border:1px solid var(--bd);border-radius:999px;padding:5px 14px;font-size:.85rem;color:var(--fg);background:none}
 #send{margin-inline-start:auto;width:38px;height:38px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:1.1rem;cursor:pointer}
 #st{text-align:center;color:var(--mut);font-size:.8rem;margin-top:8px}
+dialog{border:1px solid var(--bd);border-radius:18px;background:var(--bg);color:var(--fg);padding:22px;width:min(440px,92vw);font:inherit}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog label{display:block;margin:12px 0 4px;font-size:.85rem;color:var(--mut)}
+dialog input,dialog select{width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit}
+dialog .btns{display:flex;gap:8px;margin-top:18px}dialog .btns button{padding:9px 18px;border-radius:10px;border:1px solid var(--bd);background:none;color:var(--fg);font:inherit;cursor:pointer}
+dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var(--mut);display:block;margin-top:10px;line-height:1.5}
+.chip{cursor:pointer}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
 <aside id="side">
   <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
   <h4>אחרונים</h4><div id="list"></div>
-  <div class="foot"><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a></div>
+  <div class="foot"><button id="keys">🔑 מפתחות API</button><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a></div>
 </aside>
 <main>
   <div id="top"><button id="menu">☰</button><i id="dot"></i><span id="stt">טוען מודל…</span></div>
@@ -54,9 +61,16 @@ textarea{width:100%;border:0;outline:0;resize:none;background:none;color:var(--f
   <div id="log"><div class="col" id="msgs"></div></div>
   <form id="comp" onsubmit="return false"><div class="card">
     <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
-    <div class="row"><span class="chip">Balloni (קטן)</span><span class="chip">שיחה רגילה</span><button id="send" title="שלח">↑</button></div>
+    <div class="row"><span class="chip" id="chipM" title="החלף מודל / חבר מפתח API">Balloni (קטן)</span><span class="chip">שיחה רגילה</span><button id="send" title="שלח">↑</button></div>
   </div><div id="st">רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
 </main>
+<dialog id="dlg"><b>🔑 חיבור למודל חיצוני (מפתח API)</b>
+<label>ספק</label><select id="pv"><option value="">Balloni מקומי (בלי מפתח, בלי אינטרנט)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="custom">כתובת מותאמת (תואם OpenAI, למשל Ollama / LM Studio)</option></select>
+<div id="cf"><label>כתובת (https, או http://localhost)</label><input id="pu" dir="ltr" placeholder="https://.../v1/chat/completions"></div>
+<label>מפתח API</label><input id="pk" type="password" dir="ltr" autocomplete="off" placeholder="sk-...">
+<label>שם המודל</label><input id="pm" dir="ltr">
+<small>המפתח נשמר רק בדפדפן הזה (localStorage), לא נשלח לשום מקום חוץ מהספק שבחרת, ואינו חלק מהאתר. מי שמשתמש במחשב משותף - ימחק אותו אחרי השימוש. שיחה דרך ספק חיצוני יוצאת לאינטרנט ועלולה לעלות כסף.</small>
+<div class="btns"><button class="p" id="ok">שמור</button><button id="clr">מחק מפתח</button><button id="cx">סגור</button></div></dialog>
 <script>if(location.protocol==="file:")document.getElementById("stt").innerHTML="⚠ הדף נפתח כקובץ - פתח דרך כתובת האתר או שרת מקומי";</script>
 <script type="module">
 import { Wllama } from './wllama/index.js';
@@ -80,17 +94,51 @@ $('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'א�
 show();
 
 const wllama = new Wllama({ default: './wllama/wllama.wasm' });
-try {
+(async () => { try {
   await wllama.loadModelFromUrl(new URL('./model/balloni-00001-of-00002.gguf', location.href).href, {
     n_ctx: 2048,
     progressCallback: ({ loaded, total }) => { $('stt').textContent = 'טוען מודל… ' + Math.round(loaded / total * 100) + '%'; }
   });
-  $('stt').textContent = 'מוכן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim()) send();
-} catch (e) { $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message; }
+  $('stt').textContent = 'מוכן'; $('dot').className = 'ok'; ready = true; if (typeof send === 'function') { t.focus(); if (t.value.trim()) send(); }
+} catch (e) { $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message; } })();
 
+const PRESETS = { openai: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini'], anthropic: ['https://api.anthropic.com/v1/messages', 'claude-haiku-5-5'], openrouter: ['https://openrouter.ai/api/v1/chat/completions', 'openai/gpt-4o-mini'], groq: ['https://api.groq.com/openai/v1/chat/completions', 'llama-3.1-8b-instant'], custom: ['', ''] };
+let prov = null; try { prov = JSON.parse(localStorage.getItem('balloni-prov') || 'null'); } catch {}
+const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' || (x.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(x.hostname)); } catch { return false; } };
+function chipText() { $('chipM').textContent = prov ? prov.model + ' (' + prov.id + ')' : 'Balloni (קטן)'; }
+chipText();
+function fillDlg() { $('pv').value = prov ? prov.id : ''; $('pu').value = prov ? prov.url : ''; $('pk').value = prov ? prov.key : ''; $('pm').value = prov ? prov.model : ''; $('cf').style.display = $('pv').value === 'custom' ? '' : 'none'; }
+$('pv').onchange = () => { const p = PRESETS[$('pv').value]; if (p) { $('pu').value = p[0]; $('pm').value = p[1]; } $('cf').style.display = $('pv').value === 'custom' ? '' : 'none'; };
+const openDlg = () => { fillDlg(); $('dlg').showModal(); };
+$('keys').onclick = openDlg; $('chipM').onclick = openDlg; $('cx').onclick = () => $('dlg').close();
+$('clr').onclick = () => { prov = null; try { localStorage.removeItem('balloni-prov'); } catch {} chipText(); $('dlg').close(); };
+$('ok').onclick = () => {
+  const id = $('pv').value; if (!id) { $('clr').onclick(); return; }
+  const url = $('pu').value.trim(), key = $('pk').value.trim(), model = $('pm').value.trim();
+  if (!okUrl(url) || !key || !model) { alert('מלא כתובת תקינה (https), מפתח ושם מודל.'); return; }
+  prov = { id, url, key, model }; try { localStorage.setItem('balloni-prov', JSON.stringify(prov)); } catch {} chipText(); $('dlg').close();
+};
+// remote streaming (OpenAI-compatible SSE, or Anthropic SSE); calls onDelta(text)
+async function remoteChat(history, onDelta) {
+  const anth = prov.id === 'anthropic', headers = { 'Content-Type': 'application/json' };
+  let body;
+  if (anth) { headers['x-api-key'] = prov.key; headers['anthropic-version'] = '2023-06-01'; headers['anthropic-dangerous-direct-browser-access'] = 'true'; body = { model: prov.model, max_tokens: 1024, stream: true, messages: history }; }
+  else { headers['Authorization'] = 'Bearer ' + prov.key; body = { model: prov.model, stream: true, messages: history }; }
+  const r = await fetch(prov.url, { method: 'POST', headers, body: JSON.stringify(body), referrerPolicy: 'no-referrer', credentials: 'omit' });
+  if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+  for (;;) {
+    const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true });
+    let i; while ((i = buf.indexOf(String.fromCharCode(10))) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue; const d = line.slice(5).trim(); if (d === '[DONE]') return;
+      try { const j = JSON.parse(d); const x = anth ? (j.delta && j.delta.text) : (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content); if (x) onDelta(x); } catch {}
+    }
+  }
+}
 async function send() {
   const text = t.value.trim(); if (!text) return;
-  if (!ready) { $('stt').textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
+  if (!ready && !prov) { $('stt').textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
   if (busy) return; busy = true; t.value = '';
   if (!cur.msgs.length) { cur.title = text.slice(0, 40); chats.unshift(cur); }
   cur.msgs.push({ role: 'user', content: text });
@@ -98,10 +146,12 @@ async function send() {
   addMsg('user', text); const out = addMsg('assistant', '…'); renderList();
   let acc = '', n = 0, t0 = performance.now();
   try {
-    const stream = await wllama.createChatCompletion({ messages: cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content })), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
+    if (prov) await remoteChat(cur.msgs.slice(-12).map(m => ({ role: m.role, content: m.content })), x => { acc += x; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; });
+    else { const stream = await wllama.createChatCompletion({ messages: cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content })), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
     for await (const c of stream) {
       const d = c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
       if (d) { acc += d; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; }
+    }
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   if (acc) { const stats = (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }

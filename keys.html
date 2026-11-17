@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Balloni - מפתח API</title>
+<style>
+:root{--bg:#fff;--fg:#1f1f1d;--mut:#77756e;--card:#f7f6f3;--acc:#e5484d}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--fg:#f0efeb;--mut:#a5a39b;--card:#252523}}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7}
+main{max-width:640px;margin:0 auto;padding:48px 16px}
+.card{background:var(--card);border-radius:14px;padding:20px;margin:16px 0}
+code,pre{direction:ltr;unicode-bidi:embed;background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all}
+pre{padding:12px;white-space:pre-wrap}
+button{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 20px;font:inherit;cursor:pointer;margin-inline-end:8px}
+button.s{background:none;color:var(--fg);border:1px solid var(--mut)}
+.k{border:1px solid #f0c36d;background:#fff7e6;color:#1f1f1d;padding:12px;border-radius:10px}
+small{color:var(--mut)}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="config.js"></script>
+</head><body><main>
+<h1>🎈 מפתח API ל-Balloni</h1>
+<p>התחבר עם Google וקבל מפתח אישי כדי להשתמש ב-AI מתוכנה אחרת. מפתח אחד לכל חשבון; יצירת מפתח חדש מבטלת את הקודם.</p>
+<div class="card" id="login"><div id="gbtn"></div><small>הכניסה משמשת רק לזיהוי (כתובת המייל נשמרת כשם המפתח). שום סיסמה לא עוברת דרכנו.</small></div>
+<div class="card" id="panel" hidden>
+  <div>מחובר: <b id="who"></b></div><br>
+  <button id="mk">צור מפתח חדש</button><button class="s" id="rv">בטל את המפתח שלי</button>
+  <div id="out"></div>
+</div>
+<div class="card"><b>שימוש</b><pre>curl <span id="u"></span>/v1/chat/completions \
+ -H "Authorization: Bearer bal-..." \
+ -H "Content-Type: application/json" \
+ -d '{"messages":[{"role":"user","content":"שלום"}]}'</pre>
+<small>שיחה בלבד, עד 30 בקשות בדקה, תשובה עד 1024 טוקנים. המודל בשרת הוא מודל פתוח של Cloudflare.</small></div>
+<p><a href="index.html">← חזרה</a></p>
+</main>
+<script>
+const C = window.BALLONI, $ = id => document.getElementById(id); let token = "";
+$("u").textContent = C.api;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function call(action) {
+  const r = await fetch(C.api + "/user/key", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id_token: token, action }) });
+  return r.json();
+}
+function onCred(resp) {
+  token = resp.credential;
+  try { $("who").textContent = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email; } catch {}
+  $("login").hidden = true; $("panel").hidden = false;
+}
+$("mk").onclick = async () => {
+  const d = await call("create");
+  $("out").innerHTML = d.error ? "<p>" + esc(d.error) + "</p>" : '<p class="k">העתק עכשיו - המפתח מוצג פעם אחת בלבד:<br><code>' + esc(d.key) + "</code></p>";
+};
+$("rv").onclick = async () => { const d = await call("revoke"); $("out").innerHTML = "<p>" + (d.error ? esc(d.error) : "המפתח בוטל.") + "</p>"; };
+window.onload = () => {
+  const t = setInterval(() => { if (window.google && google.accounts) { clearInterval(t);
+    google.accounts.id.initialize({ client_id: C.googleClientId, callback: onCred });
+    google.accounts.id.renderButton($("gbtn"), { theme: "outline", size: "large", locale: "he" }); } }, 200);
+};
+</script></body></html>

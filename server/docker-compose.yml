@@ -1,0 +1,23 @@
+# Balloni in the cloud: model (llama.cpp) + API-key server + automatic HTTPS (Caddy). Only Caddy is exposed to the internet.
+services:
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: ["-m", "/models/balloni-00001-of-00002.gguf", "--host", "0.0.0.0", "--port", "8081", "-c", "2048"]
+    volumes: ["./models:/models:ro"]
+    restart: unless-stopped
+  api:
+    build: .
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env (12+ characters)}
+      UPSTREAM: http://llama:8081
+    volumes: ["./data:/data"]
+    depends_on: [llama]
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment: { DOMAIN: "${DOMAIN:?set DOMAIN in .env}" }
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    depends_on: [api]
+    restart: unless-stopped
+volumes: { caddy_data: {} }

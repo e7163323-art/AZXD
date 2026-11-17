@@ -1,0 +1,10 @@
+name = "balloni-api"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "KEYS"
+id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"   # wrangler kv namespace create KEYS

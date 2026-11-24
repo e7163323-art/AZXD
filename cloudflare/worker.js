@@ -109,7 +109,7 @@ async function verifyGoogle(token, env) {
     if (!(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64u(parts[2]), enc.encode(parts[0] + "." + parts[1])))) return null;
     const p = JSON.parse(new TextDecoder().decode(b64u(parts[1])));
     if (!["https://accounts.google.com", "accounts.google.com"].includes(p.iss)) return null;
-    if (p.aud !== env.GOOGLE_CLIENT_ID || !(p.exp * 1000 > Date.now()) || p.email_verified !== true || !p.sub) return null;
+    if (![env.GOOGLE_CLIENT_ID, DESKTOP_CLIENT_ID].includes(p.aud) || !(p.exp * 1000 > Date.now()) || p.email_verified !== true || !p.sub) return null;
     return p;
   } catch { return null; }
 }
@@ -132,6 +132,45 @@ async function userKey(req, env) {
   return json({ key, email: p.email }, 200, cors);
 }
 
+
+// ---- shared daily code quota (site + Windows app, per Google account) ----
+// /auth: a Google ID token (from the site or the app) -> a 30-day session signed with SESSION_SECRET.
+// /quota: {session, add} -> today's used seconds for that account (Israel time; resets at 00:00).
+const DESKTOP_CLIENT_ID = "284339291176-tce2i83hbkugodn5do5qllogj3un4hlt.apps.googleusercontent.com";
+const QUOTA_SEC = 30 * 60;
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+function quotaCors(req, env) {
+  const o = req.headers.get("Origin");
+  return { "Access-Control-Allow-Origin": o && o === env.SITE_ORIGIN ? o : (env.SITE_ORIGIN || "null"), "Vary": "Origin", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS", ...SEC };
+}
+async function makeSession(env, sub, email) { const exp = Date.now() + 30 * 864e5, body = sub + "|" + email + "|" + exp; return btoa(unescape(encodeURIComponent(body))) + "." + await hmac(env.SESSION_SECRET, "sess." + body); }
+async function readSession(env, s) {
+  try {
+    const [b, sig] = String(s || "").split("."); if (!b || !sig || s.length > 600) return null;
+    const body = decodeURIComponent(escape(atob(b))); if (!same(sig, await hmac(env.SESSION_SECRET, "sess." + body))) return null;
+    const [sub, email, exp] = body.split("|"); if (!(+exp > Date.now())) return null; return { sub, email };
+  } catch { return null; }
+}
+async function auth(req, env) {
+  const cors = quotaCors(req, env);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const o = req.headers.get("Origin"); if (o && o !== env.SITE_ORIGIN) return json({ error: "origin not allowed" }, 403, cors);
+  let b = {}; try { b = await req.json(); } catch {}
+  const p = await verifyGoogle(b.id_token, env); if (!p) return json({ error: "התחברות Google לא תקינה" }, 401, cors);
+  return json({ session: await makeSession(env, p.sub, p.email), email: p.email }, 200, cors);
+}
+async function quota(req, env) {
+  const cors = quotaCors(req, env);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const o = req.headers.get("Origin"); if (o && o !== env.SITE_ORIGIN) return json({ error: "origin not allowed" }, 403, cors);
+  let b = {}; try { b = await req.json(); } catch {}
+  const u = await readSession(env, b.session); if (!u) return json({ error: "login" }, 401, cors);
+  const k = "q:" + u.sub + ":" + today(); let used = parseFloat(await env.KEYS.get(k) || "0");
+  const add = Math.max(0, Math.min(1800, parseFloat(b.add) || 0));          // one request adds at most 30 minutes
+  if (add > 0) { used += add; await env.KEYS.put(k, String(Math.round(used)), { expirationTtl: 3 * 86400 }); }
+  return json({ used, limit: QUOTA_SEC, day: today(), email: u.email }, 200, cors);
+}
+
 const PAGE = `<!doctype html><html lang="he" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Balloni - מפתחות API</title>
 <style>body{font-family:Segoe UI,Arial;max-width:720px;margin:40px auto;padding:0 16px;color:#1f1f1d}table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px;border-bottom:1px solid #e5e3dd;text-align:start}button,input{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid #ccc}button.p{background:#e5484d;color:#fff;border:0;cursor:pointer}code{direction:ltr;unicode-bidi:embed;background:#f0efeb;padding:2px 6px;border-radius:6px;word-break:break-all}.k{background:#fff7e6;border:1px solid #f0c36d;padding:12px;border-radius:10px;margin:12px 0}</style>
 <body><h1>🎈 מפתחות API</h1><p>מי שמחזיק מפתח יכול לשוחח עם ה-AI (שיחה בלבד).</p><div id="app"></div><script>
@@ -151,6 +190,8 @@ export default {
     if (req.method === "OPTIONS" && p.startsWith("/v1/")) return new Response(null, { status: 204, headers: { ...SEC, ...CORS } });
     if (p === "/admin" || p === "/admin/") return new Response(PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", ...SEC, "Content-Security-Policy": "default-src 'self' 'unsafe-inline'; frame-ancestors 'none'" } });
     if (p === "/user/key") return userKey(req, env);
+    if (p === "/auth") return auth(req, env);
+    if (p === "/quota") return quota(req, env);
     if (p.startsWith("/admin/") && req.method === "POST") return admin(req, env, url);
     if (p === "/v1/models" && req.method === "GET") { const [r, e] = await authKey(req, env); return e || json({ object: "list", data: [{ id: "balloni-cloud", object: "model", owned_by: "cloudflare" }] }, 200, CORS); }
     if (p === "/v1/chat/completions" && req.method === "POST") return chat(req, env);

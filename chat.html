@@ -106,10 +106,10 @@ show();
 // Models that run inside the browser. The smart model (Qwen3 1.7B, 1.8GB) is bigger than GitHub Pages allows, so it is read straight
 // from Hugging Face; the browser keeps it in its cache, so only the first visit loads it.
 const MODELS = {
-  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'Balloni 4B', smart: true, noThink: true, size: '2.1GB',
+  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'Balloni 4B', smart: true, noThink: true, size: '2.1GB', bytes: 2075618400,
          file: 'Qwen3-4B-Instruct-2507-Q3_K_M.gguf',
          check: [[1e8, 'a5b72ce54eaadd3b42843007b4802619'], [1e9, 'e7561f160a3bcc30961ce8b23567cb5d'], [2e9, '3a3f1976b92aa9b1915d36259c465474']] },
-  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf',
+  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf', bytes: 1834426016,
           // bytes of the real file at a few offsets: a saved copy that differs is broken (a cut-off download) and is downloaded again
           check: [[1e8, 'ccfcd5e633aa95d18113091efa14d6e5'], [1e9, '0a012faaf7e0f116052336d9fa05ac54'], [18e8, '30e0ddce7fde1e09d5ff032925b1e2c8']] },
   balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'Balloni קטן', smart: false }
@@ -128,6 +128,8 @@ async function loadModel() {
     if (wllama) { try { await wllama.exit(); } catch {} }
     // CPU only (n_gpu_layers: 0): the browser GPU path produced garbage ("@@@@") on some graphics chips
     const saved = M.file ? await hasSaved(M) : false;
+    if (!saved && M.file) { try { const w0 = new Wllama({ default: './wllama/wllama.wasm' }); await w0.cacheManager.clear(); } catch {} }
+    try { const est = await navigator.storage.estimate(); if (!saved && M.bytes && est.quota && est.quota - est.usage < M.bytes * 1.05) { $('stt').textContent = 'אין מספיק מקום בדפדפן למודל הזה (' + M.size + '). פנה מקום בדיסק או בחר מודל קטן יותר.'; return; } } catch {}
     const what = saved ? 'טוען מהדפדפן (בלי אינטרנט)' : (M.smart ? 'מוריד מהאינטרנט - ' + (M.size || '1.8GB') + ', רק פעם אחת' : 'מוריד');
     const opts = { n_ctx: M.ctx, n_gpu_layers: 0, parallelDownloads: 1, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = M.name + ': ' + what + '… ' + Math.round(loaded / total * 100) + '%'; } };
     wllama = new Wllama({ default: './wllama/wllama.wasm' });
@@ -147,7 +149,7 @@ async function loadModel() {
 async function hasSaved(M) {
   try {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('cache');
-    for await (const [n, h] of dir.entries()) if (h.kind === 'file' && !n.startsWith('__') && n.endsWith(M.file)) { const f = await h.getFile(); return f.size > 1e8; }
+    for await (const [n, h] of dir.entries()) if (h.kind === 'file' && !n.startsWith('__') && n.endsWith(M.file)) { const f = await h.getFile(); return M.bytes ? f.size === M.bytes : f.size > 1e8; }
   } catch {}
   return false;
 }
@@ -159,6 +161,7 @@ async function cachedOk(M) {
     for await (const [n, h] of dir.entries()) {
       if (h.kind !== 'file' || n.startsWith('__') || !n.endsWith(M.file)) continue;
       const f = await h.getFile();
+      if (M.bytes && f.size !== M.bytes) return false;
       for (const [o, hex] of M.check) {
         const b = new Uint8Array(await f.slice(o, o + 16).arrayBuffer());
         if ([...b].map(x => x.toString(16).padStart(2, '0')).join('') !== hex) return false;
@@ -166,14 +169,14 @@ async function cachedOk(M) {
       return true;
     }
   } catch {}
-  return true;                                          // no access to the saved copy: nothing to compare
+  return !M.bytes;                                      // the copy is not there although it should be
 }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
 // ---- Google sign-in gate. The ID token is checked here (audience, issuer, expiry, verified email); the session is kept 30 days in this browser.
 const DAY = 864e5;
 function b64json(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(s + '==='.slice((s.length + 3) % 4))))); }
-function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId ? u : null; } catch { return null; } }
-function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); }
+function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId && 'sess' in u ? u : null; } catch { return null; } }
+function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); syncQuota(0); }
 $('out').onclick = () => { try { localStorage.removeItem('balloni-user'); } catch {} location.reload(); };
 (function gate() { const u = session(); if (u) signedIn(u); })();
 // one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown
@@ -305,8 +308,17 @@ async function readFile(f) {
 // ---- daily code quota: every Google account gets 30 minutes a day of the AI writing code (code requests and the 3 agents)
 const QUOTA = 30 * 60, CODE_RE = /קוד|תכנית|תוכנית|תוכנה|אפליקציה|אתר|סקריפט|פונקצי|משחק|html|css|javascript|python|code|script|function|program|\bapp\b/i;
 const qKey = () => { const u = session(); return (u ? u.email : '?') + '|' + new Date().toISOString().slice(0, 10); };
-function codeUsed() { try { return (JSON.parse(localStorage.getItem('balloni-quota') || '{}'))[qKey()] || 0; } catch { return 0; } }
-function addCode(sec) { try { const k = qKey(), q = {}; q[k] = codeUsed() + sec; localStorage.setItem('balloni-quota', JSON.stringify(q)); } catch {} }
+let serverUsed = null;
+function localUsed() { try { return (JSON.parse(localStorage.getItem('balloni-quota') || '{}'))[qKey()] || 0; } catch { return 0; } }
+function codeUsed() { return serverUsed !== null ? serverUsed : localUsed(); }
+async function syncQuota(add) {
+  const u = session(); if (!u || !u.sess) return;
+  try {
+    const r = await fetch(window.BALLONI.api + '/quota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: u.sess, add: add || 0 }) });
+    if (r.ok) { const d = await r.json(); serverUsed = d.used; if (typeof drawQuota === 'function') drawQuota(); }
+  } catch {}
+}
+function addCode(sec) { try { const k = qKey(), q = {}; q[k] = localUsed() + sec; localStorage.setItem('balloni-quota', JSON.stringify(q)); } catch {} if (serverUsed !== null) serverUsed += sec; syncQuota(sec); }
 let codeT0 = 0;
 function drawQuota() {
   const used = codeUsed() + (codeT0 ? (performance.now() - codeT0) / 1000 : 0), frac = Math.min(1, used / QUOTA), pct = Math.round(frac * 100);
@@ -357,7 +369,8 @@ async function send() {
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   clearInterval(tmi); tm.remove();
   if (acc) { const stats = secs() + ' · ' + (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
-  else { cur.msgs.pop(); out.remove(); }
+  else if (!/^שגיאה/.test(out.textContent)) { cur.msgs.pop(); out.remove(); }
+  else cur.msgs.pop();
   if (isCode) { addCode((performance.now() - codeT0) / 1000); codeT0 = 0; drawQuota(); }
   save(); busy = false; t.focus();
 }

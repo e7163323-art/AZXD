@@ -51,6 +51,9 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 .cd{position:relative;width:140px;height:84px;border:1px solid var(--bd);border-radius:12px;padding:8px 10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;font-size:.82rem}
 .cd b{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}.cd i{font-style:normal;align-self:flex-start;background:var(--bd);border-radius:8px;padding:1px 8px;color:var(--mut);font-size:.72rem}
 .cd button{position:absolute;top:4px;left:6px;border:0;background:none;color:var(--mut);cursor:pointer}body.drag .card{outline:2px dashed var(--acc)}
+#qm{margin-inline-start:auto;width:240px;font-size:.78rem}.ql{display:flex;justify-content:space-between;gap:8px}.ql span+span{color:var(--mut)}
+.qb{height:6px;border-radius:3px;background:var(--bd);margin-top:5px;overflow:hidden}.qb i{display:block;height:100%;width:0;background:#2563eb;border-radius:3px;margin-inline-start:0;transition:width .3s}
+@media(max-width:560px){#qm{width:140px}.ql span:first-child{display:none}}
 .chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
@@ -62,7 +65,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <div class="foot"><button id="keys">🔑 מפתחות API</button><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a><button id="out">🚪 התנתק <span id="who"></span></button></div>
 </aside>
 <main>
-  <div id="top"><button id="menu">☰</button><i id="dot"></i><span id="stt">טוען מודל…</span></div>
+  <div id="top"><button id="menu">☰</button><i id="dot"></i><span id="stt">טוען מודל…</span><div id="qm" title=""><div class="ql"><span>מגבלה יומית לקוד</span><span id="qt">מתאפס ב-00:00 · 0%</span></div><div class="qb"><i id="qf"></i></div></div></div>
   <div id="empty"><h1><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg><span id="greet"></span></h1></div>
   <div id="log"><div class="col" id="msgs"></div></div>
   <form id="comp" onsubmit="return false"><div class="card">
@@ -304,6 +307,14 @@ const QUOTA = 30 * 60, CODE_RE = /קוד|תכנית|תוכנית|תוכנה|אפ
 const qKey = () => { const u = session(); return (u ? u.email : '?') + '|' + new Date().toISOString().slice(0, 10); };
 function codeUsed() { try { return (JSON.parse(localStorage.getItem('balloni-quota') || '{}'))[qKey()] || 0; } catch { return 0; } }
 function addCode(sec) { try { const k = qKey(), q = {}; q[k] = codeUsed() + sec; localStorage.setItem('balloni-quota', JSON.stringify(q)); } catch {} }
+let codeT0 = 0;
+function drawQuota() {
+  const used = codeUsed() + (codeT0 ? (performance.now() - codeT0) / 1000 : 0), frac = Math.min(1, used / QUOTA), pct = Math.round(frac * 100);
+  $('qt').textContent = 'מתאפס ב-00:00 · ' + pct + '%';
+  const f = $('qf'); f.style.width = (frac * 100) + '%'; f.style.background = frac >= 1 ? '#e5484d' : frac >= .8 ? '#f59e0b' : '#2563eb';
+  $('qm').title = frac >= 1 ? 'המכסה נגמרה להיום' : 'נשארו ' + Math.ceil((QUOTA - used) / 60) + ' דקות של כתיבת קוד היום';
+}
+drawQuota(); setInterval(() => { if (codeT0) drawQuota(); }, 1000);
 async function send() {
   let text = t.value.trim(); if (!text && !atts.length) return; if (!text) text = 'סכם את הקבצים.';
   if (!session()) { location.reload(); return; }
@@ -312,6 +323,7 @@ async function send() {
   const isCode = (team && MODELS[lm].smart) || CODE_RE.test(text);
   if (isCode && codeUsed() >= QUOTA) { $('stt').textContent = 'נגמרה המכסה היומית לכתיבת קוד (30 דקות לחשבון). אפשר לשוחח רגיל; המכסה מתחדשת מחר.'; return; }
   busy = true; t.value = '';
+  if (isCode) codeT0 = performance.now();
   let shown = text;
   if (atts.length) {
     const files = atts; atts = []; drawCards(); shown += String.fromCharCode(10) + '📎 ' + files.map(a => a.file.name).join(', ');
@@ -330,6 +342,9 @@ async function send() {
   document.body.classList.remove('empty'); $('empty').style.display = 'none';
   addMsg('user', shown); const out = addMsg('assistant', '…'); renderList();
   let acc = '', n = 0, t0 = performance.now();
+  const secs = () => { const s = Math.round((performance.now() - t0) / 1000); return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's'; };
+  const tm = document.createElement('span'); tm.textContent = '⏱ 0s'; if (out.nextSibling) out.nextSibling.appendChild(tm);
+  const tmi = setInterval(() => { tm.textContent = '⏱ ' + secs(); }, 1000);
   try {
     if (prov) await remoteChat(cur.msgs.slice(-12).map(m => ({ role: m.role, content: m.content })), x => { acc += x; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; });
     else if (team && MODELS[lm].smart) { acc = await teamChat(text, out); n = acc.length / 3; }
@@ -340,9 +355,10 @@ async function send() {
       out.textContent = acc;
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
-  if (acc) { const stats = (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
+  clearInterval(tmi); tm.remove();
+  if (acc) { const stats = secs() + ' · ' + (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
   else { cur.msgs.pop(); out.remove(); }
-  if (isCode) addCode((performance.now() - t0) / 1000);
+  if (isCode) { addCode((performance.now() - codeT0) / 1000); codeT0 = 0; drawQuota(); }
   save(); busy = false; t.focus();
 }
 $('send').onclick = send;

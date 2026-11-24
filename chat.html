@@ -46,7 +46,7 @@ dialog label{display:block;margin:12px 0 4px;font-size:.85rem;color:var(--mut)}
 dialog input,dialog select{width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit}
 dialog .btns{display:flex;gap:8px;margin-top:18px}dialog .btns button{padding:9px 18px;border-radius:10px;border:1px solid var(--bd);background:none;color:var(--fg);font:inherit;cursor:pointer}
 dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var(--mut);display:block;margin-top:10px;line-height:1.5}
-.chip{cursor:pointer}
+.chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
 <aside id="side">
@@ -61,8 +61,8 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <div id="log"><div class="col" id="msgs"></div></div>
   <form id="comp" onsubmit="return false"><div class="card">
     <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
-    <div class="row"><span class="chip" id="chipM" title="החלף מודל / חבר מפתח API">Balloni (קטן)</span><span class="chip">שיחה רגילה</span><button id="send" title="שלח">↑</button></div>
-  </div><div id="st">רץ אצלך בדפדפן · בלי שרת · בלי אינטרנט אחרי הטעינה · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
+    <div class="row"><select class="chip" id="lm" title="איזה מודל ירוץ בדפדפן"><option value="qwen">🧠 Balloni Qwen3 · חכם · 3 סוכנים</option><option value="balloni">🎈 Balloni קטן · מהיר</option></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
+  </div><div id="st">רץ אצלך בדפדפן · בלי שרת · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
 </main>
 <dialog id="dlg"><b>🔑 חיבור למודל חיצוני (מפתח API)</b>
 <label>ספק</label><select id="pv"><option value="">Balloni מקומי (בלי מפתח, בלי אינטרנט)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="custom">כתובת מותאמת (תואם OpenAI, למשל Ollama / LM Studio)</option></select>
@@ -93,19 +93,70 @@ $('menu').onclick = () => $('side').classList.toggle('open');
 $('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'אני: ' : 'Balloni: ') + m.content).join(String.fromCharCode(10, 10)); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tx], { type: 'text/plain;charset=utf-8' })); a.download = 'balloni-chat.txt'; a.click(); };
 show();
 
-const wllama = new Wllama({ default: './wllama/wllama.wasm' });
-(async () => { try {
-  await wllama.loadModelFromUrl(new URL('./model/balloni-00001-of-00002.gguf', location.href).href, {
-    n_ctx: 2048,
-    progressCallback: ({ loaded, total }) => { $('stt').textContent = 'טוען מודל… ' + Math.round(loaded / total * 100) + '%'; }
-  });
-  $('stt').textContent = 'מוכן'; $('dot').className = 'ok'; ready = true; if (typeof send === 'function') { t.focus(); if (t.value.trim()) send(); }
-} catch (e) { $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message; } })();
+// Models that run inside the browser. The smart model (Qwen3 1.7B, 1.8GB) is bigger than GitHub Pages allows, so it is read straight
+// from Hugging Face; the browser keeps it in its cache, so only the first visit loads it.
+const MODELS = {
+  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true },
+  balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'Balloni קטן', smart: false }
+};
+let lm = 'qwen'; try { lm = localStorage.getItem('balloni-lm') || 'qwen'; } catch {} if (!MODELS[lm]) lm = 'qwen';
+let team = false; try { team = localStorage.getItem('balloni-team') === '1'; } catch {}
+let wllama = null, loading = 0;
+$('lm').value = lm;
+function teamText() { $('chipT').textContent = team && MODELS[lm].smart ? '🤖 3 סוכנים' : '💬 שיחה רגילה'; }
+teamText();
+$('chipT').onclick = () => { if (!MODELS[lm].smart) { $('stt').textContent = '3 הסוכנים עובדים רק עם המודל החכם'; return; } team = !team; try { localStorage.setItem('balloni-team', team ? '1' : '0'); } catch {} teamText(); };
+$('lm').onchange = () => { lm = $('lm').value; try { localStorage.setItem('balloni-lm', lm); } catch {} teamText(); loadModel(); };
+async function loadModel() {
+  const my = ++loading, M = MODELS[lm]; ready = false; $('dot').className = ''; $('stt').textContent = 'טוען את ' + M.name + '…';
+  try {
+    if (wllama) { try { await wllama.exit(); } catch {} }
+    wllama = new Wllama({ default: './wllama/wllama.wasm' });
+    await wllama.loadModelFromUrl(M.url, { n_ctx: M.ctx, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } });
+    if (my !== loading) return;
+    $('stt').textContent = 'מוכן · ' + M.name + ' רץ אצלך בדפדפן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim() && typeof send === 'function') send();
+  } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את Balloni הקטן' : ''); }
+}
+loadModel();
+// one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown
+const NL = String.fromCharCode(10);
+function stripThink(s) { const e = s.lastIndexOf('</think>'); if (e >= 0) return s.slice(e + 8).trim(); return s.replace(/<think>[\s\S]*$/, '').trim(); }
+async function gen(messages, max, temp, think, onDelta) {
+  const M = MODELS[lm];
+  if (M.smart) { messages = messages.map((m, i) => i === messages.length - 1 && m.role === 'user' ? { role: 'user', content: m.content + (think ? ' /think' : ' /no_think') } : m); }
+  const stream = await wllama.createChatCompletion({ messages, max_tokens: max, temperature: temp, top_k: 40, top_p: 0.9, stream: true });
+  let raw = '';
+  for await (const c of stream) {
+    const d = c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
+    if (d) { raw += d; if (onDelta) onDelta(stripThink(raw)); }
+  }
+  const out = stripThink(raw);
+  if (!out && think) { const a = raw.indexOf('<think>'); return raw.slice(a < 0 ? 0 : a + 7).replace('</think>', '').trim(); }   // thinking used the whole budget: keep the thoughts
+  return out;
+}
+// the owner's 3 agents (as in the PC app): planner (thinks) -> builder -> reviewer (its answer is streamed)
+async function teamChat(text, out) {
+  const ag = document.createElement('div'); ag.className = 'ag'; out.textContent = ''; out.appendChild(ag);
+  const ans = document.createElement('div'); out.appendChild(ans);
+  const step = s => { ag.textContent += s + NL; log.scrollTop = log.scrollHeight; };
+  let t0 = performance.now();
+  step('🧠 סוכן 1 (מתכנן) חושב…');
+  const plan = (await gen([{ role: 'system', content: "You are a careful planning agent. Analyze the user's request, list the requirements, edge cases and a short step-by-step plan. Be concise. Answer in the user's language." }, { role: 'user', content: text }], 350, 0.4, true)).slice(0, 4000);
+  step('   (' + Math.round((performance.now() - t0) / 1000) + ' שנ׳) ' + plan.replace(/\s+/g, ' ').slice(0, 160) + '…');
+  t0 = performance.now(); step('💻 סוכן 2 (מבצע) כותב את התשובה…');
+  const draft = (await gen([{ role: 'system', content: 'אתה בלוני 🎈, עוזר חכם שמדבר עברית ויודע לכתוב קוד. ענה במלואו, ואם צריך קוד - כתוב קוד שלם ועובד בתוך בלוק קוד.' }, { role: 'user', content: 'בקשה: ' + text + NL + NL + 'תוכנית שהכין סוכן המתכנן (השתמש בה):' + NL + plan }], 700, 0.6, false)).slice(0, 9000);
+  step('   (' + Math.round((performance.now() - t0) / 1000) + ' שנ׳) טיוטה מוכנה (' + draft.length + ' תווים)');
+  step('🔍 סוכן 3 (בודק) מחפש טעויות ומתקן…');
+  let fin = await gen([{ role: 'system', content: 'You are a strict reviewer. Check the draft answer for bugs, missing requirements and mistakes against the plan. Then output ONLY the corrected final answer, in the same language and style, nothing else.' }, { role: 'user', content: 'בקשה: ' + text + NL + NL + 'תוכנית:' + NL + plan + NL + NL + 'טיוטה:' + NL + draft }], 800, 0.3, false, x => { ans.textContent = x; log.scrollTop = log.scrollHeight; });
+  if (!fin) fin = draft;
+  ans.textContent = fin;
+  return fin;
+}
 
 const PRESETS = { openai: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini'], anthropic: ['https://api.anthropic.com/v1/messages', 'claude-haiku-5-5'], openrouter: ['https://openrouter.ai/api/v1/chat/completions', 'openai/gpt-4o-mini'], groq: ['https://api.groq.com/openai/v1/chat/completions', 'llama-3.1-8b-instant'], custom: ['', ''] };
 let prov = null; try { prov = JSON.parse(localStorage.getItem('balloni-prov') || 'null'); } catch {}
 const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' || (x.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(x.hostname)); } catch { return false; } };
-function chipText() { $('chipM').textContent = prov ? prov.model + ' (' + prov.id + ')' : 'Balloni (קטן)'; }
+function chipText() { $('chipM').textContent = prov ? '🔑 ' + prov.model : '🔑'; }
 chipText();
 function fillDlg() { $('pv').value = prov ? prov.id : ''; $('pu').value = prov ? prov.url : ''; $('pk').value = prov ? prov.key : ''; $('pm').value = prov ? prov.model : ''; $('cf').style.display = $('pv').value === 'custom' ? '' : 'none'; }
 $('pv').onchange = () => { const p = PRESETS[$('pv').value]; if (p) { $('pu').value = p[0]; $('pm').value = p[1]; } $('cf').style.display = $('pv').value === 'custom' ? '' : 'none'; };
@@ -147,11 +198,12 @@ async function send() {
   let acc = '', n = 0, t0 = performance.now();
   try {
     if (prov) await remoteChat(cur.msgs.slice(-12).map(m => ({ role: m.role, content: m.content })), x => { acc += x; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; });
-    else { const stream = await wllama.createChatCompletion({ messages: cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content })), max_tokens: 300, temperature: 0.7, top_k: 40, top_p: 0.9, stream: true });
-    for await (const c of stream) {
-      const d = c.choices && c.choices[0] && c.choices[0].delta && c.choices[0].delta.content;
-      if (d) { acc += d; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; }
-    }
+    else if (team && MODELS[lm].smart) { acc = await teamChat(text, out); n = acc.length / 3; }
+    else {
+      const hist = cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content }));
+      if (MODELS[lm].smart) hist.unshift({ role: 'system', content: 'אתה עוזר שמדבר עברית רגילה וטבעית. ענה קצר וענייני על מה שנשאלת. כשמבקשים קוד - כתוב קוד שלם ועובד.' });
+      acc = await gen(hist, MODELS[lm].smart ? 800 : 300, 0.7, false, x => { n++; out.textContent = x; log.scrollTop = log.scrollHeight; });
+      out.textContent = acc;
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   if (acc) { const stats = (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }

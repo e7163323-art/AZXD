@@ -1,6 +1,6 @@
 // Balloni API on Cloudflare Workers: no computer to keep running. Admin page creates/revokes API keys; key holders call an OpenAI-compatible chat API.
 // The model is a Cloudflare-hosted open model (Workers AI), not Balloni itself. Secrets: ADMIN_PASSWORD (12+ chars) and SESSION_SECRET (random, 32+ chars).
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const MODEL = "@cf/qwen/qwen2.5-coder-32b-instruct";
 const PER_MINUTE = 30, MAX_KEYS = 600, MAX_USERS = 500, MAX_BODY = 1 << 20;
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Max-Age": "600" };
 const SEC = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
@@ -92,7 +92,7 @@ async function chat(req, env) {
       }
     });
     return new Response(out.pipeThrough(ts), { headers: { "Content-Type": "text/event-stream", ...SEC, ...CORS } });
-  } catch { return apiErr(502, "model error"); }
+  } catch (e) { return apiErr(502, "model error: " + String(e && e.message || e).slice(0, 300)); }
 }
 
 

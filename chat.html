@@ -57,7 +57,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 .chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
-<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>הכניסה משמשת רק לזיהוי. שום סיסמה לא עוברת דרכנו, והשיחות נשארות בדפדפן שלך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
+<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
   <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
@@ -90,7 +90,28 @@ const h = new Date().getHours(); $('greet').textContent = (h>=5&&h<12?'בוקר 
 // chats are kept only in this browser (localStorage)
 let chats = []; try { chats = JSON.parse(localStorage.getItem('balloni-chats') || '[]'); } catch {}
 let cur = { title: '', msgs: [] }, ready = false, busy = false;
-const save = () => { try { localStorage.setItem('balloni-chats', JSON.stringify(chats.slice(0, 30))); } catch {} };
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+chats.forEach(c => { if (!c.id) c.id = newId(); if (!c.updated) c.updated = Date.now(); });
+const localSave = () => { try { localStorage.setItem('balloni-chats', JSON.stringify(chats.slice(0, 30))); } catch {} };
+let cloudT = 0;
+const save = () => { if (cur.msgs.length) { if (!cur.id) cur.id = newId(); cur.updated = Date.now(); } localSave(); clearTimeout(cloudT); cloudT = setTimeout(() => cloud('put'), 1500); };
+// ---- chats in the cloud, per Google account: the same list in the PC app and on other computers
+const toCloud = c => ({ id: c.id, title: c.title, updated: c.updated, msgs: c.msgs.map(m => ({ role: m.role, text: m.content, shown: m.shown, stats: m.stats })) });
+const fromCloud = s => ({ id: s.id, title: s.title, updated: s.updated, msgs: s.msgs.map(m => ({ role: m.role, content: m.text, shown: m.shown, stats: m.stats })) });
+function mergeChats(list) {
+  const map = new Map(chats.map(c => [c.id, c]));
+  for (const s of list || []) { const l = map.get(s.id); if (!l) map.set(s.id, fromCloud(s)); else if (s.updated > (l.updated || 0) && !(l === cur && busy)) Object.assign(l, fromCloud(s)); }
+  chats = [...map.values()].filter(c => c.msgs && c.msgs.length).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  localSave(); if (!busy) show(); else renderList();
+}
+async function cloud(op) {
+  const u = session(); if (!u || !u.sess) return;
+  const body = { session: u.sess, op }; if (op === 'put') body.chats = chats.filter(c => c.id && c.msgs.length).slice(0, 60).map(toCloud);
+  try {
+    const r = await fetch(window.BALLONI.api + '/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (r.ok) mergeChats((await r.json()).chats);
+  } catch {}
+}
 function renderList() { const l = $('list'); l.innerHTML = ''; chats.forEach(c => { const d = document.createElement('div'); d.textContent = c.title || 'שיחה חדשה'; if (c === cur) d.className = 'on'; d.onclick = () => { cur = c; show(); $('side').classList.remove('open'); }; l.appendChild(d); }); }
 function addMsg(role, text, stats) {
   const d = document.createElement('div'); d.className = 'm' + (role === 'user' ? ' u' : ''); d.textContent = text; msgs.appendChild(d);
@@ -176,7 +197,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 const DAY = 864e5;
 function b64json(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(s + '==='.slice((s.length + 3) % 4))))); }
 function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId && 'sess' in u ? u : null; } catch { return null; } }
-function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); syncQuota(0); }
+function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); syncQuota(0); cloud('get'); }
 $('out').onclick = () => { try { localStorage.removeItem('balloni-user'); } catch {} location.reload(); };
 (function gate() { const u = session(); if (u) signedIn(u); })();
 // one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown
@@ -349,7 +370,7 @@ async function send() {
     if (notes.length) $('stt').textContent = notes.join(' · ');
     text = text + extra;
   }
-  if (!cur.msgs.length) { cur.title = text.slice(0, 40); chats.unshift(cur); }
+  if (!cur.msgs.length) { cur.title = text.slice(0, 40); cur.id = newId(); cur.updated = Date.now(); chats.unshift(cur); }
   cur.msgs.push({ role: 'user', content: text, shown });
   document.body.classList.remove('empty'); $('empty').style.display = 'none';
   addMsg('user', shown); const out = addMsg('assistant', '…'); renderList();

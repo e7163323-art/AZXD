@@ -111,8 +111,18 @@ async function loadModel() {
   const my = ++loading, M = MODELS[lm]; ready = false; $('dot').className = ''; $('stt').textContent = 'טוען את ' + M.name + '…';
   try {
     if (wllama) { try { await wllama.exit(); } catch {} }
+    // CPU only (n_gpu_layers: 0): the browser GPU path produced garbage ("@@@@") on some graphics chips
+    const opts = { n_ctx: M.ctx, n_gpu_layers: 0, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } };
     wllama = new Wllama({ default: './wllama/wllama.wasm' });
-    await wllama.loadModelFromUrl(M.url, { n_ctx: M.ctx, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } });
+    await wllama.loadModelFromUrl(M.url, opts);
+    if (!wllama.isModelLoaded()) {                       // a cut-off download left a broken file in the browser cache: delete it and load again
+      if (my === loading) $('stt').textContent = 'הקובץ השמור פגום, טוען מחדש…';
+      try { await wllama.exit(); } catch {}
+      wllama = new Wllama({ default: './wllama/wllama.wasm' });
+      try { await wllama.cacheManager.clear(); } catch {}
+      await wllama.loadModelFromUrl(M.url, opts);
+      if (!wllama.isModelLoaded()) throw new Error('המודל לא נטען');
+    }
     if (my !== loading) return;
     $('stt').textContent = 'מוכן · ' + M.name + ' רץ אצלך בדפדפן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim() && typeof send === 'function') send();
   } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את Balloni הקטן' : ''); }

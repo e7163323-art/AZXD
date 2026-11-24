@@ -114,7 +114,9 @@ async function loadModel() {
   try {
     if (wllama) { try { await wllama.exit(); } catch {} }
     // CPU only (n_gpu_layers: 0): the browser GPU path produced garbage ("@@@@") on some graphics chips
-    const opts = { n_ctx: M.ctx, n_gpu_layers: 0, parallelDownloads: 1, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } };
+    const saved = M.file ? await hasSaved(M) : false;
+    const what = saved ? 'טוען מהדפדפן (בלי אינטרנט)' : (M.smart ? 'מוריד מהאינטרנט - 1.8GB, רק פעם אחת' : 'מוריד');
+    const opts = { n_ctx: M.ctx, n_gpu_layers: 0, parallelDownloads: 1, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = M.name + ': ' + what + '… ' + Math.round(loaded / total * 100) + '%'; } };
     wllama = new Wllama({ default: './wllama/wllama.wasm' });
     await wllama.loadModelFromUrl(M.url, opts);
     if (!wllama.isModelLoaded() || !(await cachedOk(M))) {   // a cut-off download left a broken file in the browser cache: delete it and load again
@@ -128,6 +130,13 @@ async function loadModel() {
     if (my !== loading) return;
     $('stt').textContent = 'מוכן · ' + M.name + ' רץ אצלך בדפדפן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim() && typeof send === 'function') send();
   } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את Balloni הקטן' : ''); }
+}
+async function hasSaved(M) {
+  try {
+    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('cache');
+    for await (const [n, h] of dir.entries()) if (h.kind === 'file' && !n.startsWith('__') && n.endsWith(M.file)) { const f = await h.getFile(); return f.size > 1e8; }
+  } catch {}
+  return false;
 }
 // compares the saved model file (browser storage) with known bytes of the real file
 async function cachedOk(M) {
@@ -146,6 +155,7 @@ async function cachedOk(M) {
   } catch {}
   return true;                                          // no access to the saved copy: nothing to compare
 }
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
 loadModel();
 // one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown
 const NL = String.fromCharCode(10);

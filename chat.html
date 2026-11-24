@@ -2,7 +2,6 @@
 <html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Balloni</title>
 <script src="coi-serviceworker.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="config.js"></script>
 <style>
 :root{--bg:#fff;--side:#f7f6f3;--elev:#f0efeb;--bd:#e5e3dd;--fg:#1f1f1d;--mut:#77756e;--acc:#e5484d}
@@ -51,7 +50,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 #gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:16px}#gate h1{margin:0;font-weight:500}#gate p{color:var(--mut);margin:0;max-width:420px;line-height:1.6}#gerr{color:#e5484d;min-height:1.2em}body.signed #gate{display:none}.chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
-<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>הכניסה משמשת רק לזיהוי. שום סיסמה לא עוברת דרכנו, והשיחות נשארות בדפדפן שלך.</p><div id="gbtn"></div><div id="gerr"></div></div>
+<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>הכניסה משמשת רק לזיהוי. שום סיסמה לא עוברת דרכנו, והשיחות נשארות בדפדפן שלך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
   <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
@@ -167,24 +166,8 @@ const DAY = 864e5;
 function b64json(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(s + '==='.slice((s.length + 3) % 4))))); }
 function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId ? u : null; } catch { return null; } }
 function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); }
-function onGoogle(resp) {
-  try {
-    const p = b64json(resp.credential.split('.')[1]);
-    if (p.aud !== window.BALLONI.googleClientId || !['accounts.google.com', 'https://accounts.google.com'].includes(p.iss) || !(p.exp * 1000 > Date.now()) || p.email_verified !== true) throw new Error('bad token');
-    const u = { email: p.email, aud: p.aud, until: Date.now() + 30 * DAY };
-    try { localStorage.setItem('balloni-user', JSON.stringify(u)); } catch {}
-    $('gerr').textContent = ''; signedIn(u);
-  } catch { $('gerr').textContent = 'ההתחברות נכשלה, נסה שוב.'; }
-}
-$('out').onclick = () => { try { localStorage.removeItem('balloni-user'); } catch {} try { google.accounts.id.disableAutoSelect(); } catch {} location.reload(); };
-(function gate() {
-  const u = session(); if (u) { signedIn(u); return; }
-  const t0 = setInterval(() => {
-    if (!(window.google && google.accounts && google.accounts.id)) return; clearInterval(t0);
-    google.accounts.id.initialize({ client_id: window.BALLONI.googleClientId, callback: onGoogle, auto_select: true });
-    google.accounts.id.renderButton($('gbtn'), { theme: 'outline', size: 'large', locale: 'he', text: 'signin_with' });
-  }, 200);
-})();
+$('out').onclick = () => { try { localStorage.removeItem('balloni-user'); } catch {} location.reload(); };
+(function gate() { const u = session(); if (u) signedIn(u); })();
 // one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown
 const NL = String.fromCharCode(10);
 function stripThink(s) { const e = s.lastIndexOf('</think>'); if (e >= 0) return s.slice(e + 8).trim(); return s.replace(/<think>[\s\S]*$/, '').trim(); }

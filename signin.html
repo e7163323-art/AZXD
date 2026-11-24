@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Balloni - התחברות</title>
+<style>
+:root{--bg:#fff;--fg:#1f1f1d;--mut:#77756e}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a18;--fg:#f0efeb;--mut:#a5a39b}}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--fg);text-align:center;padding:16px;box-sizing:border-box}
+h1{margin:0;font-weight:500}p{color:var(--mut);margin:0;max-width:420px;line-height:1.6}#err{color:#e5484d;min-height:1.2em}
+</style>
+<!-- This page is served without the cross-origin isolation headers (see coi-serviceworker.js), so Google's sign-in popup can answer it. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="config.js"></script>
+</head><body>
+<h1>🎈 Balloni</h1>
+<p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>הכניסה משמשת רק לזיהוי. שום סיסמה לא עוברת דרכנו, והשיחות נשארות בדפדפן שלך.</p>
+<div id="gbtn"></div><div id="err"></div>
+<script>
+const DAY = 864e5, $ = id => document.getElementById(id);
+function b64json(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(s + '==='.slice((s.length + 3) % 4))))); }
+function onGoogle(resp) {
+  try {
+    const p = b64json(resp.credential.split('.')[1]);
+    if (p.aud !== window.BALLONI.googleClientId || !['accounts.google.com', 'https://accounts.google.com'].includes(p.iss) || !(p.exp * 1000 > Date.now()) || p.email_verified !== true) throw new Error('bad');
+    localStorage.setItem('balloni-user', JSON.stringify({ email: p.email, aud: p.aud, until: Date.now() + 30 * DAY }));
+    location.replace('chat.html');
+  } catch { $('err').textContent = 'ההתחברות נכשלה, נסה שוב.'; }
+}
+const t0 = setInterval(() => {
+  if (!(window.google && google.accounts && google.accounts.id)) return; clearInterval(t0);
+  google.accounts.id.initialize({ client_id: window.BALLONI.googleClientId, callback: onGoogle });
+  google.accounts.id.renderButton($('gbtn'), { theme: 'outline', size: 'large', locale: 'he', text: 'signin_with' });
+}, 200);
+</script>
+</body></html>

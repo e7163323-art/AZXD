@@ -47,7 +47,11 @@ dialog label{display:block;margin:12px 0 4px;font-size:.85rem;color:var(--mut)}
 dialog input,dialog select{width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit}
 dialog .btns{display:flex;gap:8px;margin-top:18px}dialog .btns button{padding:9px 18px;border-radius:10px;border:1px solid var(--bd);background:none;color:var(--fg);font:inherit;cursor:pointer}
 dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var(--mut);display:block;margin-top:10px;line-height:1.5}
-#gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:16px}#gate h1{margin:0;font-weight:500}#gate p{color:var(--mut);margin:0;max-width:420px;line-height:1.6}#gerr{color:#e5484d;min-height:1.2em}body.signed #gate{display:none}.chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
+#gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:16px}#gate h1{margin:0;font-weight:500}#gate p{color:var(--mut);margin:0;max-width:420px;line-height:1.6}#gerr{color:#e5484d;min-height:1.2em}body.signed #gate{display:none}#cards{display:flex;flex-wrap:wrap;gap:8px}#cards:empty{display:none}#cards{margin-bottom:8px}
+.cd{position:relative;width:140px;height:84px;border:1px solid var(--bd);border-radius:12px;padding:8px 10px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;font-size:.82rem}
+.cd b{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}.cd i{font-style:normal;align-self:flex-start;background:var(--bd);border-radius:8px;padding:1px 8px;color:var(--mut);font-size:.72rem}
+.cd button{position:absolute;top:4px;left:6px;border:0;background:none;color:var(--mut);cursor:pointer}body.drag .card{outline:2px dashed var(--acc)}
+.chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
 <div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>הכניסה משמשת רק לזיהוי. שום סיסמה לא עוברת דרכנו, והשיחות נשארות בדפדפן שלך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
@@ -62,8 +66,9 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <div id="empty"><h1><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg><span id="greet"></span></h1></div>
   <div id="log"><div class="col" id="msgs"></div></div>
   <form id="comp" onsubmit="return false"><div class="card">
+    <div id="cards"></div>
     <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
-    <div class="row"><select class="chip" id="lm" title="איזה מודל ירוץ בדפדפן"><option value="big">🚀 Balloni 4B · הכי חכם · 3 סוכנים</option><option value="qwen">🧠 Balloni Qwen3 1.7B · 3 סוכנים</option><option value="balloni">🎈 Balloni קטן · מהיר</option></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
+    <div class="row"><button type="button" class="chip" id="att" title="צרף קבצים (או גרור אותם לחלון)">📎</button><input type="file" id="fin" multiple hidden><select class="chip" id="lm" title="איזה מודל ירוץ בדפדפן"><option value="big">🚀 Balloni 4B · הכי חכם · 3 סוכנים</option><option value="qwen">🧠 Balloni Qwen3 1.7B · 3 סוכנים</option><option value="balloni">🎈 Balloni קטן · מהיר</option></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
   </div><div id="st">רץ אצלך בדפדפן · בלי שרת · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
 </main>
 <dialog id="dlg"><b>🔑 חיבור למודל חיצוני (מפתח API)</b>
@@ -89,7 +94,7 @@ function addMsg(role, text, stats) {
   if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }
   log.scrollTop = log.scrollHeight; return d;
 }
-function show() { msgs.innerHTML = ''; cur.msgs.forEach(m => addMsg(m.role, m.content, m.stats)); document.body.classList.toggle('empty', cur.msgs.length === 0); $('empty').style.display = cur.msgs.length ? 'none' : 'flex'; renderList(); }
+function show() { msgs.innerHTML = ''; cur.msgs.forEach(m => addMsg(m.role, m.shown || m.content, m.stats)); document.body.classList.toggle('empty', cur.msgs.length === 0); $('empty').style.display = cur.msgs.length ? 'none' : 'flex'; renderList(); }
 $('new').onclick = () => { cur = { title: '', msgs: [] }; show(); $('side').classList.remove('open'); t.focus(); };
 $('menu').onclick = () => $('side').classList.toggle('open');
 $('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'אני: ' : 'Balloni: ') + m.content).join(String.fromCharCode(10, 10)); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tx], { type: 'text/plain;charset=utf-8' })); a.download = 'balloni-chat.txt'; a.click(); };
@@ -237,15 +242,93 @@ async function remoteChat(history, onDelta) {
     }
   }
 }
+// ---- attachments: read in the browser (nothing is uploaded). Text and code, Word/Excel/PowerPoint/OpenDocument, zip.
+// Images and PDF cannot be read here (the models only read text); PDF works in the PC app.
+const TEXT_EXT = /\.(txt|md|csv|tsv|json|py|html?|css|js|ts|jsx|tsx|cs|java|c|cpp|h|xml|log|ini|ya?ml|sql|bat|ps1|sh|rb|go|rs|php|kt|swift|tex|svg|cfg|toml|vue)$/i;
+const IMG_EXT = /\.(png|jpe?g|gif|bmp|webp|ico|tiff?|heic)$/i;
+let atts = [];
+function drawCards() {
+  const box = $('cards'); box.innerHTML = '';
+  atts.forEach((a, i) => { const d = document.createElement('div'); d.className = 'cd';
+    const b = document.createElement('b'); b.textContent = a.file.name; const k = document.createElement('i'); k.textContent = (a.file.name.split('.').pop() || 'FILE').toUpperCase().slice(0, 5);
+    const x = document.createElement('button'); x.textContent = '✕'; x.title = 'הסר'; x.onclick = () => { atts.splice(i, 1); drawCards(); };
+    d.append(x, b, k); box.appendChild(d); });
+}
+function addFiles(list) { for (const f of list) { if (atts.length >= 12) break; atts.push({ file: f }); } drawCards(); t.focus(); }
+$('att').onclick = () => $('fin').click();
+$('fin').onchange = () => { addFiles($('fin').files); $('fin').value = ''; };
+addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drag'); });
+addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drag'); });
+addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('drag'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+// minimal zip reader (central directory + deflate via the browser's DecompressionStream)
+async function unzip(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), out = {}; let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 66000); i--) if (v.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error('קובץ zip לא תקין');
+  let p = v.getUint32(e + 16, true); const n = v.getUint16(e + 10, true);
+  for (let k = 0; k < n && v.getUint32(p, true) === 0x02014b50; k++) {
+    const method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), nlen = v.getUint16(p + 28, true), xlen = v.getUint16(p + 30, true), clen = v.getUint16(p + 32, true), lho = v.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen)); p += 46 + nlen + xlen + clen;
+    out[name] = async () => { const s = lho + 30 + v.getUint16(lho + 26, true) + v.getUint16(lho + 28, true), raw = u8.subarray(s, s + csize);
+      if (method === 0) return new TextDecoder().decode(raw);
+      return await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text(); };
+  }
+  return out;
+}
+const xmlText = (x, para) => x.replace(para, '\n').replace(/<(w:tab|w:br|text:tab|text:line-break)[^>]*\/>/g, ' ').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&').trim();
+async function readFile(f) {
+  const n = f.name.toLowerCase();
+  if (IMG_EXT.test(n)) return { text: '(תמונה: ' + f.name + ')', note: f.name + ': המודל לא רואה תמונות' };
+  if (n.endsWith('.pdf')) return { text: '', note: f.name + ': PDF נקרא רק בתוכנה למחשב' };
+  if (/\.(docx|xlsx|pptx|odt|ods|odp|zip)$/.test(n)) {
+    const z = await unzip(await f.arrayBuffer());
+    if (n.endsWith('.docx')) return { text: xmlText(await z['word/document.xml'](), /<\/w:p>/g) };
+    if (/\.od[tsp]$/.test(n)) return { text: xmlText(await z['content.xml'](), /<\/text:p>|<\/text:h>|<\/table:table-row>/g) };
+    if (n.endsWith('.pptx')) { const s = Object.keys(z).filter(k => /^ppt\/slides\/slide\d+\.xml$/.test(k)).sort((a, b) => a.length - b.length || a.localeCompare(b)); let r = ''; for (let i = 0; i < s.length; i++) r += '--- שקופית ' + (i + 1) + ' ---\n' + xmlText(await z[s[i]](), /<\/a:p>/g) + '\n'; return { text: r }; }
+    if (n.endsWith('.xlsx')) {
+      const shared = z['xl/sharedStrings.xml'] ? [...(await z['xl/sharedStrings.xml']()).matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => xmlText(m[1], /$^/g)) : [];
+      let r = ''; for (const k of Object.keys(z).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k))) { r += '--- ' + k.slice(14) + ' ---\n';
+        for (const row of (await z[k]()).matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)) r += [...row[1].matchAll(/<c([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)].map(m => { const vv = (m[2] || '').match(/<v>([\s\S]*?)<\/v>/); let val = vv ? vv[1] : xmlText(m[2] || '', /$^/g); if (/t="s"/.test(m[1]) && shared[+val] !== undefined) val = shared[+val]; return val; }).join(', ') + '\n'; }
+      return { text: r };
+    }
+    let r = 'תוכן הארכיון:\n' + Object.keys(z).filter(k => !k.endsWith('/')).slice(0, 200).map(k => '  ' + k).join('\n') + '\n', shown = 0;
+    for (const k of Object.keys(z)) { if (shown >= 25 || !TEXT_EXT.test(k) || /node_modules\/|\.min\./.test(k)) continue; r += '\n=== ' + k + ' ===\n' + (await z[k]()) + '\n'; shown++; }
+    return { text: r };
+  }
+  const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
+  if (!TEXT_EXT.test(n) && head.includes(0)) return { text: '(קובץ בינארי: ' + f.name + ')', note: f.name + ': קובץ בינארי, אין בו טקסט לקרוא' };
+  return { text: await f.text() };
+}
+// ---- daily code quota: every Google account gets 30 minutes a day of the AI writing code (code requests and the 3 agents)
+const QUOTA = 30 * 60, CODE_RE = /קוד|תכנית|תוכנית|תוכנה|אפליקציה|אתר|סקריפט|פונקצי|משחק|html|css|javascript|python|code|script|function|program|\bapp\b/i;
+const qKey = () => { const u = session(); return (u ? u.email : '?') + '|' + new Date().toISOString().slice(0, 10); };
+function codeUsed() { try { return (JSON.parse(localStorage.getItem('balloni-quota') || '{}'))[qKey()] || 0; } catch { return 0; } }
+function addCode(sec) { try { const k = qKey(), q = {}; q[k] = codeUsed() + sec; localStorage.setItem('balloni-quota', JSON.stringify(q)); } catch {} }
 async function send() {
-  const text = t.value.trim(); if (!text) return;
+  let text = t.value.trim(); if (!text && !atts.length) return; if (!text) text = 'סכם את הקבצים.';
   if (!session()) { location.reload(); return; }
   if (!ready && !prov) { $('stt').textContent = 'המודל עדיין נטען, ההודעה תישלח כשיסתיים…'; return; }
-  if (busy) return; busy = true; t.value = '';
+  if (busy) return;
+  const isCode = (team && MODELS[lm].smart) || CODE_RE.test(text);
+  if (isCode && codeUsed() >= QUOTA) { $('stt').textContent = 'נגמרה המכסה היומית לכתיבת קוד (30 דקות לחשבון). אפשר לשוחח רגיל; המכסה מתחדשת מחר.'; return; }
+  busy = true; t.value = '';
+  let shown = text;
+  if (atts.length) {
+    const files = atts; atts = []; drawCards(); shown += String.fromCharCode(10) + '📎 ' + files.map(a => a.file.name).join(', ');
+    let budget = Math.max(3000, ((MODELS[lm] || {}).ctx || 2048) * 2 - text.length - 900), extra = '', notes = [];
+    for (const a of files) {
+      try { const r = await readFile(a.file); if (r.note) notes.push(r.note); if (!r.text) continue;
+        let body = r.text; if (body.length > budget) { body = body.slice(0, Math.max(0, budget)) + String.fromCharCode(10) + '...(נחתך: הקובץ ארוך מדי לדפדפן; קבצים ענקיים נקראים במלואם בתוכנה למחשב)'; notes.push(a.file.name + ': נחתך'); }
+        extra += String.fromCharCode(10, 10) + '[' + a.file.name + ']' + String.fromCharCode(10) + body; budget -= body.length; }
+      catch (e) { notes.push(a.file.name + ': ' + e.message); }
+    }
+    if (notes.length) $('stt').textContent = notes.join(' · ');
+    text = text + extra;
+  }
   if (!cur.msgs.length) { cur.title = text.slice(0, 40); chats.unshift(cur); }
-  cur.msgs.push({ role: 'user', content: text });
+  cur.msgs.push({ role: 'user', content: text, shown });
   document.body.classList.remove('empty'); $('empty').style.display = 'none';
-  addMsg('user', text); const out = addMsg('assistant', '…'); renderList();
+  addMsg('user', shown); const out = addMsg('assistant', '…'); renderList();
   let acc = '', n = 0, t0 = performance.now();
   try {
     if (prov) await remoteChat(cur.msgs.slice(-12).map(m => ({ role: m.role, content: m.content })), x => { acc += x; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; });
@@ -259,6 +342,7 @@ async function send() {
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   if (acc) { const stats = (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
   else { cur.msgs.pop(); out.remove(); }
+  if (isCode) addCode((performance.now() - t0) / 1000);
   save(); busy = false; t.focus();
 }
 $('send').onclick = send;

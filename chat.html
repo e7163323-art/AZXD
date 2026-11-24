@@ -96,7 +96,9 @@ show();
 // Models that run inside the browser. The smart model (Qwen3 1.7B, 1.8GB) is bigger than GitHub Pages allows, so it is read straight
 // from Hugging Face; the browser keeps it in its cache, so only the first visit loads it.
 const MODELS = {
-  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true },
+  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf',
+          // bytes of the real file at a few offsets: a saved copy that differs is broken (a cut-off download) and is downloaded again
+          check: [[1e8, 'ccfcd5e633aa95d18113091efa14d6e5'], [1e9, '0a012faaf7e0f116052336d9fa05ac54'], [18e8, '30e0ddce7fde1e09d5ff032925b1e2c8']] },
   balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'Balloni קטן', smart: false }
 };
 let lm = 'qwen'; try { lm = localStorage.getItem('balloni-lm') || 'qwen'; } catch {} if (!MODELS[lm]) lm = 'qwen';
@@ -112,20 +114,37 @@ async function loadModel() {
   try {
     if (wllama) { try { await wllama.exit(); } catch {} }
     // CPU only (n_gpu_layers: 0): the browser GPU path produced garbage ("@@@@") on some graphics chips
-    const opts = { n_ctx: M.ctx, n_gpu_layers: 0, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } };
+    const opts = { n_ctx: M.ctx, n_gpu_layers: 0, parallelDownloads: 1, progressCallback: ({ loaded, total }) => { if (my === loading) $('stt').textContent = 'טוען את ' + M.name + '… ' + Math.round(loaded / total * 100) + '%' + (M.smart ? ' (1.8GB, רק בפעם הראשונה)' : ''); } };
     wllama = new Wllama({ default: './wllama/wllama.wasm' });
     await wllama.loadModelFromUrl(M.url, opts);
-    if (!wllama.isModelLoaded()) {                       // a cut-off download left a broken file in the browser cache: delete it and load again
+    if (!wllama.isModelLoaded() || !(await cachedOk(M))) {   // a cut-off download left a broken file in the browser cache: delete it and load again
       if (my === loading) $('stt').textContent = 'הקובץ השמור פגום, טוען מחדש…';
       try { await wllama.exit(); } catch {}
       wllama = new Wllama({ default: './wllama/wllama.wasm' });
       try { await wllama.cacheManager.clear(); } catch {}
       await wllama.loadModelFromUrl(M.url, opts);
-      if (!wllama.isModelLoaded()) throw new Error('המודל לא נטען');
+      if (!wllama.isModelLoaded() || !(await cachedOk(M))) throw new Error('המודל שהורד פגום, נסה לרענן');
     }
     if (my !== loading) return;
     $('stt').textContent = 'מוכן · ' + M.name + ' רץ אצלך בדפדפן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim() && typeof send === 'function') send();
   } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את Balloni הקטן' : ''); }
+}
+// compares the saved model file (browser storage) with known bytes of the real file
+async function cachedOk(M) {
+  if (!M.check) return true;
+  try {
+    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('cache');
+    for await (const [n, h] of dir.entries()) {
+      if (h.kind !== 'file' || n.startsWith('__') || !n.endsWith(M.file)) continue;
+      const f = await h.getFile();
+      for (const [o, hex] of M.check) {
+        const b = new Uint8Array(await f.slice(o, o + 16).arrayBuffer());
+        if ([...b].map(x => x.toString(16).padStart(2, '0')).join('') !== hex) return false;
+      }
+      return true;
+    }
+  } catch {}
+  return true;                                          // no access to the saved copy: nothing to compare
 }
 loadModel();
 // one local generation; streams through onDelta; Qwen3 thinking is switched with its /think and /no_think tags and never shown

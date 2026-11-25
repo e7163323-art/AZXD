@@ -68,6 +68,7 @@ body.empty main{background:radial-gradient(ellipse 42% 36% at 50% 52%,rgba(66,13
 #dl{border:0;background:var(--elev);color:var(--fg);border-radius:999px;padding:7px 16px;font-size:.88rem;text-decoration:none;white-space:nowrap}#dl:hover{filter:brightness(.96)}
 #list div{display:flex;align-items:center;gap:4px}#list .tl{flex:1;overflow:hidden;text-overflow:ellipsis}#list .dots{border:0;background:none;color:var(--mut);cursor:pointer;font-size:1.1rem;padding:0 6px;border-radius:50%;visibility:hidden}#list div:hover .dots,#list div.on .dots{visibility:visible}#cmenu{position:fixed;z-index:30;background:var(--bg);border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;min-width:190px}#cmenu button{border:0;background:none;color:var(--fg);font:inherit;text-align:start;padding:10px 14px;border-radius:10px;cursor:pointer}#cmenu button:hover{background:var(--elev)}
 #gate .hero{width:min(560px,92vw);border-radius:20px;box-shadow:0 6px 30px rgba(0,0,0,.25)}.logo{font-size:1.35rem}.logo .av{width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:28% 30%}
+#chipM,#keys{display:none!important}
 </style></head><body class="empty">
 <div id="gate"><img class="hero" src="Gemini_Generated_Image_2jrqbm2jrqbm2jrq.jfif" alt="בינה יהודית"><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של בינה יהודית, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
@@ -343,7 +344,7 @@ async function teamChat(text, out) {
 }
 
 const PRESETS = { openai: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini'], anthropic: ['https://api.anthropic.com/v1/messages', 'claude-haiku-5-5'], openrouter: ['https://openrouter.ai/api/v1/chat/completions', 'openai/gpt-4o-mini'], groq: ['https://api.groq.com/openai/v1/chat/completions', 'llama-3.1-8b-instant'], custom: ['', ''] };
-let prov = null; try { prov = JSON.parse(localStorage.getItem('balloni-prov') || 'null'); } catch {}
+let prov = null; try { localStorage.removeItem('balloni-prov'); } catch {}
 const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' || (x.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(x.hostname)); } catch { return false; } };
 function chipText() { $('chipM').textContent = prov ? '🔑 ' + prov.model : '🔑'; }
 chipText();

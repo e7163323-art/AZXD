@@ -66,10 +66,12 @@ body.empty main{background:radial-gradient(ellipse 42% 36% at 50% 52%,rgba(66,13
 .card{border-radius:32px;border-color:transparent;box-shadow:0 1px 8px rgba(32,33,36,.14);max-width:700px;padding:12px 18px 8px}
 #send{background:var(--acc)}.u{border-radius:22px 22px 6px 22px}
 #dl{border:0;background:var(--elev);color:var(--fg);border-radius:999px;padding:7px 16px;font-size:.88rem;text-decoration:none;white-space:nowrap}#dl:hover{filter:brightness(.96)}
+#list div{display:flex;align-items:center;gap:4px}#list .tl{flex:1;overflow:hidden;text-overflow:ellipsis}#list .dots{border:0;background:none;color:var(--mut);cursor:pointer;font-size:1.1rem;padding:0 6px;border-radius:50%;visibility:hidden}#list div:hover .dots,#list div.on .dots{visibility:visible}#cmenu{position:fixed;z-index:30;background:var(--bg);border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;min-width:190px}#cmenu button{border:0;background:none;color:var(--fg);font:inherit;text-align:start;padding:10px 14px;border-radius:10px;cursor:pointer}#cmenu button:hover{background:var(--elev)}
+#gate .hero{width:min(560px,92vw);border-radius:20px;box-shadow:0 6px 30px rgba(0,0,0,.25)}.logo .av{width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:28% 30%}
 </style></head><body class="empty">
-<div id="gate"><h1>🎈 בינה יהודית</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של בינה יהודית, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
+<div id="gate"><img class="hero" src="Gemini_Generated_Image_2jrqbm2jrqbm2jrq.jfif" alt="בינה יהודית"><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של בינה יהודית, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
-  <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>בינה יהודית</div>
+  <div class="logo"><img class="av" src="Gemini_Generated_Image_2jrqbm2jrqbm2jrq.jfif" alt="">בינה יהודית</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
   <h4>אחרונים</h4><div id="list"></div>
   <div class="foot"><button id="keys">🔑 מפתחות API</button><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a><button id="out">🚪 התנתק <span id="who"></span></button></div>
@@ -111,18 +113,45 @@ const fromCloud = s => ({ id: s.id, title: s.title, updated: s.updated, msgs: s.
 function mergeChats(list) {
   const map = new Map(chats.map(c => [c.id, c]));
   for (const s of list || []) { const l = map.get(s.id); if (!l) map.set(s.id, fromCloud(s)); else if (s.updated > (l.updated || 0) && !(l === cur && busy)) Object.assign(l, fromCloud(s)); }
-  chats = [...map.values()].filter(c => c.msgs && c.msgs.length).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  chats = [...map.values()].filter(c => c.msgs && c.msgs.length && !deletedIds.includes(c.id)).sort((a, b) => (b.updated || 0) - (a.updated || 0));
   localSave(); if (!busy) show(); else renderList();
 }
 async function cloud(op) {
   const u = session(); if (!u || !u.sess) return;
-  const body = { session: u.sess, op }; if (op === 'put') body.chats = chats.filter(c => c.id && c.msgs.length).slice(0, 60).map(toCloud);
+  const body = { session: u.sess, op }; if (op === 'put') body.chats = chats.filter(c => c.id && c.msgs.length).slice(0, 60).map(toCloud); if (op === 'put' && deletedIds.length) body.deleted = deletedIds.slice(-200);
   try {
     const r = await fetch(window.BALLONI.api + '/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (r.ok) mergeChats((await r.json()).chats);
   } catch {}
 }
-function renderList() { const l = $('list'); l.innerHTML = ''; chats.forEach(c => { const d = document.createElement('div'); d.textContent = c.title || 'שיחה חדשה'; if (c === cur) d.className = 'on'; d.onclick = () => { cur = c; show(); $('side').classList.remove('open'); }; l.appendChild(d); }); }
+let pins = []; try { pins = JSON.parse(localStorage.getItem('balloni-pins') || '[]'); } catch {}
+let deletedIds = [];
+function closeMenu() { const m = document.getElementById('cmenu'); if (m) m.remove(); }
+document.addEventListener('click', closeMenu);
+function chatMenu(c, btn) {
+  closeMenu(); const m = document.createElement('div'); m.id = 'cmenu'; const r = btn.getBoundingClientRect();
+  m.style.top = Math.min(r.bottom + 4, innerHeight - 220) + 'px'; m.style.left = Math.max(8, r.left - 190) + 'px';
+  const item = (ic, tx, fn) => { const b = document.createElement('button'); b.textContent = ic + '  ' + tx; b.onclick = e => { e.stopPropagation(); closeMenu(); fn(); }; m.appendChild(b); };
+  item('🔗', 'שיתוף השיחה', async () => {
+    const text = (c.title || 'שיחה') + String.fromCharCode(10, 10) + c.msgs.map(x => (x.role === 'user' ? 'אני: ' : 'בינה יהודית: ') + String(x.shown || x.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()).join(String.fromCharCode(10, 10));
+    try { if (navigator.share) await navigator.share({ title: c.title || 'שיחה', text }); else { await navigator.clipboard.writeText(text); $('stt').textContent = 'השיחה הועתקה, אפשר להדביק אותה בכל מקום'; } } catch {}
+  });
+  const pinned = pins.includes(c.id);
+  item('📌', pinned ? 'ביטול הצמדה' : 'הצמדה', () => { pins = pinned ? pins.filter(x => x !== c.id) : [c.id, ...pins]; try { localStorage.setItem('balloni-pins', JSON.stringify(pins)); } catch {} renderList(); });
+  item('✏️', 'שינוי השם', () => { const n = prompt('שם חדש לשיחה:', c.title || ''); if (n && n.trim()) { c.title = n.trim().slice(0, 80); const keep = cur; cur = c; save(); cur = keep; renderList(); } });
+  item('🗑', 'מחיקה', () => { if (!confirm('למחוק את "' + (c.title || 'שיחה') + '"? אי אפשר לשחזר.')) return; deletedIds.push(c.id); chats = chats.filter(x => x !== c); if (cur === c) cur = { title: '', msgs: [] }; localSave(); cloud('put'); show(); });
+  document.body.appendChild(m);
+}
+function renderList() {
+  const l = $('list'); l.innerHTML = '';
+  const order = [...chats].sort((a, b) => (pins.includes(b.id) ? 1 : 0) - (pins.includes(a.id) ? 1 : 0));
+  order.forEach(c => {
+    const d = document.createElement('div'); if (c === cur) d.className = 'on';
+    const tl = document.createElement('span'); tl.className = 'tl'; tl.textContent = (pins.includes(c.id) ? '📌 ' : '') + (c.title || 'שיחה חדשה'); d.appendChild(tl);
+    const k = document.createElement('button'); k.className = 'dots'; k.textContent = '⋮'; k.title = 'אפשרויות'; k.onclick = e => { e.stopPropagation(); chatMenu(c, k); }; d.appendChild(k);
+    d.onclick = () => { cur = c; show(); $('side').classList.remove('open'); }; l.appendChild(d);
+  });
+}
 function addMsg(role, text, stats) {
   const d = document.createElement('div'); d.className = 'm' + (role === 'user' ? ' u' : ''); if (role === 'user') d.textContent = text; else renderMd(d, text || ''); msgs.appendChild(d);
   if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.dataset.raw || d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }

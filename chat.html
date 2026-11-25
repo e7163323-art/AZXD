@@ -56,6 +56,16 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 @media(max-width:560px){#qm{width:140px}.ql span:first-child{display:none}}
 .chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
+:root{--bg:#fff;--side:#f8fafd;--elev:#e9eef6;--bd:#e3e6ea;--fg:#1f1f1f;--mut:#5f6368;--acc:#0b57d0;--on:#d3e3fd}
+@media(prefers-color-scheme:dark){:root{--bg:#131314;--side:#1e1f20;--elev:#2a2b2d;--bd:#3c4043;--fg:#e3e3e3;--mut:#9aa0a6;--acc:#a8c7fa;--on:#004a77}}
+body{font-family:"Google Sans","Segoe UI",Arial,sans-serif}
+aside{width:300px;padding:14px 10px}.nb{border-radius:999px;padding:11px 18px;font-weight:500}
+#list div{border-radius:999px;padding:8px 16px}#list div.on{background:var(--on)}#list div:hover{background:var(--elev)}
+body.empty main{background:radial-gradient(ellipse 42% 36% at 50% 52%,rgba(66,133,244,.24),rgba(66,133,244,.08) 55%,transparent 78%)}
+#empty h1{font-size:2.4rem;font-weight:400}#empty svg{display:none}
+.card{border-radius:32px;border-color:transparent;box-shadow:0 1px 8px rgba(32,33,36,.14);max-width:700px;padding:12px 18px 8px}
+#send{background:var(--acc)}.u{border-radius:22px 22px 6px 22px}
+#dl{border:0;background:var(--elev);color:var(--fg);border-radius:999px;padding:7px 16px;font-size:.88rem;text-decoration:none;white-space:nowrap}#dl:hover{filter:brightness(.96)}
 </style></head><body class="empty">
 <div id="gate"><h1>🎈 בינה יהודית</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של בינה יהודית, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
@@ -65,7 +75,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <div class="foot"><button id="keys">🔑 מפתחות API</button><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a><button id="out">🚪 התנתק <span id="who"></span></button></div>
 </aside>
 <main>
-  <div id="top"><button id="menu">☰</button><i id="dot"></i><span id="stt">טוען מודל…</span><div id="qm" title=""><div class="ql"><span>מגבלה יומית לקוד</span><span id="qt">מתאפס ב-00:00 · 0%</span></div><div class="qb"><i id="qf"></i></div></div></div>
+  <div id="top"><button id="menu">☰</button><a id="dl" href="https://drive.google.com/file/d/1aYTNXmbV9A-DQuuCJmOhcBQGuosBrh1l/view?usp=sharing" target="_blank" rel="noopener" title="התוכנה למחשב (Windows), עובדת מהענן בלי להוריד מודל">⬇ הורדת האפליקציה</a><i id="dot"></i><span id="stt">טוען מודל…</span><div id="qm" title=""><div class="ql"><span>מגבלה יומית לקוד</span><span id="qt">מתאפס ב-00:00 · 0%</span></div><div class="qb"><i id="qf"></i></div></div></div>
   <div id="empty"><h1><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg><span id="greet"></span></h1></div>
   <div id="log"><div class="col" id="msgs"></div></div>
   <form id="comp" onsubmit="return false"><div class="card">
@@ -86,7 +96,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 import { Wllama } from './wllama/index.js';
 const $ = id => document.getElementById(id);
 const t = $('t'), msgs = $('msgs'), log = $('log');
-const h = new Date().getHours(); $('greet').textContent = (h>=5&&h<12?'בוקר טוב':h<18?'צהריים טובים':h<22?'ערב טוב':'לילה טוב') + ', מה שלומך?';
+const h = new Date().getHours(); $('greet').textContent = 'ממה להתחיל?';
 // chats are kept only in this browser (localStorage)
 let chats = []; try { chats = JSON.parse(localStorage.getItem('balloni-chats') || '[]'); } catch {}
 let cur = { title: '', msgs: [] }, ready = false, busy = false;

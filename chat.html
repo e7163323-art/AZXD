@@ -71,7 +71,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <form id="comp" onsubmit="return false"><div class="card">
     <div id="cards"></div>
     <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
-    <div class="row"><button type="button" class="chip" id="att" title="צרף קבצים (או גרור אותם לחלון)">📎</button><input type="file" id="fin" multiple hidden><select class="chip" id="lm" title="איזה מודל יענה"><optgroup label="בענן · בלי הורדה"><option value="c-smart">🧠 Balloni חכם · ענן</option><option value="c-code">💻 Balloni קוד · ענן</option><option value="c-fast">⚡ Balloni מהיר · ענן</option><option value="c-vision">👁 Balloni ראייה · ענן · רואה תמונות</option></optgroup><optgroup label="בדפדפן · בלי אינטרנט"><option value="big">🚀 Balloni 4B · הכי חכם · 3 סוכנים</option><option value="qwen">🧠 Balloni Qwen3 1.7B · 3 סוכנים</option><option value="balloni">🎈 Balloni קטן · מהיר</option></optgroup></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
+    <div class="row"><button type="button" class="chip" id="att" title="צרף קבצים (או גרור אותם לחלון)">📎</button><input type="file" id="fin" multiple hidden><select class="chip" id="lm" title="איזה מודל יענה"><optgroup label="בענן · בלי הורדה"><option value="c-smart">🧠 יהודי פשוט 1.3 · הכי חכם</option><option value="c-vision">👁 יהודי פשוט 1.2 · רואה תמונות</option><option value="c-code">💻 יהודי פשוט 1.1 · קוד</option><option value="c-fast">⚡ יהודי פשוט 1.0 · מהיר</option></optgroup><optgroup label="בדפדפן · בלי אינטרנט"><option value="big">🚀 יהודי פשוט 0.3 · 3 סוכנים</option><option value="qwen">🧠 יהודי פשוט 0.2 · 3 סוכנים</option><option value="balloni">🎈 יהודי פשוט 0.1 · קטן</option></optgroup></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
   </div><div id="st">רץ אצלך בדפדפן · בלי שרת · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
 </main>
 <dialog id="dlg"><b>🔑 חיבור למודל חיצוני (מפתח API)</b>
@@ -139,17 +139,17 @@ show();
 // Models that run inside the browser. The smart model (Qwen3 1.7B, 1.8GB) is bigger than GitHub Pages allows, so it is read straight
 // from Hugging Face; the browser keeps it in its cache, so only the first visit loads it.
 const MODELS = {
-  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'Balloni 4B', smart: true, noThink: true, size: '2.1GB', bytes: 2075618400,
+  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'יהודי פשוט 0.3', smart: true, noThink: true, size: '2.1GB', bytes: 2075618400,
          file: 'Qwen3-4B-Instruct-2507-Q3_K_M.gguf',
          check: [[1e8, 'a5b72ce54eaadd3b42843007b4802619'], [1e9, 'e7561f160a3bcc30961ce8b23567cb5d'], [2e9, '3a3f1976b92aa9b1915d36259c465474']] },
-  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'Balloni Qwen3', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf', bytes: 1834426016,
+  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'יהודי פשוט 0.2', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf', bytes: 1834426016,
           // bytes of the real file at a few offsets: a saved copy that differs is broken (a cut-off download) and is downloaded again
           check: [[1e8, 'ccfcd5e633aa95d18113091efa14d6e5'], [1e9, '0a012faaf7e0f116052336d9fa05ac54'], [18e8, '30e0ddce7fde1e09d5ff032925b1e2c8']] },
-  balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'Balloni קטן', smart: false },
-  'c-smart': { cloud: 'smart', name: 'Balloni חכם (ענן)', smart: true, ctx: 8192 },
-  'c-code': { cloud: 'code', name: 'Balloni קוד (ענן)', smart: true, ctx: 8192 },
-  'c-fast': { cloud: 'fast', name: 'Balloni מהיר (ענן)', smart: true, ctx: 8192 },
-  'c-vision': { cloud: 'vision', name: 'Balloni ראייה (ענן)', smart: true, ctx: 8192 }
+  balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'יהודי פשוט 0.1', smart: false },
+  'c-smart': { cloud: 'smart', name: 'יהודי פשוט 1.3', smart: true, ctx: 8192 },
+  'c-code': { cloud: 'code', name: 'יהודי פשוט 1.1', smart: true, ctx: 8192 },
+  'c-fast': { cloud: 'fast', name: 'יהודי פשוט 1.0', smart: true, ctx: 8192 },
+  'c-vision': { cloud: 'vision', name: 'יהודי פשוט 1.2', smart: true, ctx: 8192 }
 };
 let lm = 'c-smart'; try { lm = localStorage.getItem('balloni-lm3') || 'c-smart'; } catch {} if (!MODELS[lm]) lm = 'c-smart';
 let team = false; try { team = localStorage.getItem('balloni-team') === '1'; } catch {}

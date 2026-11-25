@@ -125,10 +125,29 @@ function thinkBlock(el, text) {
   const b = document.createElement('div'); b.textContent = m[1].trim(); det.appendChild(sm); det.appendChild(b); el.appendChild(det);
   return text.replace(m[0], '');
 }
+function inlineMd(d, t) {
+  t.replace(/^#{1,6} +/gm, '').split(/(\*\*[^*\n]+\*\*)/).forEach(p => { if (/^\*\*[^*]+\*\*$/.test(p)) { const b = document.createElement('b'); b.textContent = p.slice(2, -2); d.appendChild(b); } else if (p) d.appendChild(document.createTextNode(p)); });
+}
+const VID_EXT = /\.(mp4|webm|mov|m4v|ogv|mkv)$/i;
+async function videoSheet(file) {
+  const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = URL.createObjectURL(file);
+  try {
+    await new Promise((ok, no) => { v.onloadedmetadata = ok; v.onerror = () => no(new Error('הדפדפן לא מצליח לפתוח את הווידאו')); });
+    const n = 6, cols = 3, w = 360, h = Math.round(w * ((v.videoHeight / v.videoWidth) || 0.5625));
+    const c = document.createElement('canvas'); c.width = w * cols; c.height = h * Math.ceil(n / cols); const g = c.getContext('2d'); g.font = 'bold 18px Arial';
+    for (let i = 0; i < n; i++) {
+      const tt = v.duration * (i + 0.5) / n;
+      await new Promise(ok => { v.onseeked = ok; v.currentTime = tt; });
+      const x = (i % cols) * w, y = Math.floor(i / cols) * h; g.drawImage(v, x, y, w, h);
+      g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(x, y, 64, 24); g.fillStyle = '#fff'; g.fillText((i + 1) + ' · ' + Math.round(tt) + 's', x + 5, y + 18);
+    }
+    return [c.toDataURL('image/jpeg', 0.7), v.duration];
+  } finally { URL.revokeObjectURL(v.src); }
+}
 function renderMd(el, text) {
   el.dataset.raw = text; el.textContent = '';
   thinkBlock(el, String(text)).split('```').forEach((p, i) => {
-    if (i % 2 === 0) { const t = p.replace(/^\n+|\n+$/g, ''); if (t) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } return; }
+    if (i % 2 === 0) { const t = p.replace(/^\n+|\n+$/g, ''); if (t) { const d = document.createElement('div'); inlineMd(d, t); el.appendChild(d); } return; }
     const nl = p.indexOf('\n'), lang = nl > 0 ? p.slice(0, nl).trim() : '', code = nl > 0 ? p.slice(nl + 1) : p;
     const box = document.createElement('div'); box.className = 'code';
     const bar = document.createElement('div'); bar.className = 'cbar'; const lb = document.createElement('span'); lb.textContent = lang || 'code'; bar.appendChild(lb);
@@ -411,7 +430,7 @@ async function send() {
     const files = atts; atts = []; drawCards(); shown += String.fromCharCode(10) + '📎 ' + files.map(a => a.file.name).join(', ');
     let budget = Math.max(3000, ((MODELS[lm] || {}).ctx || 2048) * 2 - text.length - 900), extra = '', notes = [];
     for (const a of files) {
-      try { if (MODELS[lm].cloud && IMG_EXT.test(a.file.name)) { if (!pendingImage) pendingImage = await imgToDataUrl(a.file); else notes.push(a.file.name + ': אפשר תמונה אחת בכל הודעה'); continue; } const r = await readFile(a.file); if (r.note) notes.push(r.note); if (!r.text) continue;
+      try { if (VID_EXT.test(a.file.name)) { if (!MODELS[lm].cloud) { notes.push(a.file.name + ': כדי לראות וידאו בחר מודל בענן'); continue; } if (pendingImage) { notes.push(a.file.name + ': אפשר תמונה או וידאו אחד בכל הודעה'); continue; } const [img, dur] = await videoSheet(a.file); pendingImage = img; extra += String.fromCharCode(10) + String.fromCharCode(10) + '[וידאו: ' + a.file.name + ', אורך ' + Math.round(dur) + ' שניות. מצורפת תמונה אחת עם 6 פריימים מהסרטון לפי הסדר (1 עד 6, עם הזמן בשניות). תאר מה קורה בסרטון לפי הפריימים. את הקול אי אפשר לשמוע.]'; continue; } if (MODELS[lm].cloud && IMG_EXT.test(a.file.name)) { if (!pendingImage) pendingImage = await imgToDataUrl(a.file); else notes.push(a.file.name + ': אפשר תמונה אחת בכל הודעה'); continue; } const r = await readFile(a.file); if (r.note) notes.push(r.note); if (!r.text) continue;
         let body = r.text; if (body.length > budget) { body = body.slice(0, Math.max(0, budget)) + String.fromCharCode(10) + '...(נחתך: הקובץ ארוך מדי לדפדפן; קבצים ענקיים נקראים במלואם בתוכנה למחשב)'; notes.push(a.file.name + ': נחתך'); }
         extra += String.fromCharCode(10, 10) + '[' + a.file.name + ']' + String.fromCharCode(10) + body; budget -= body.length; }
       catch (e) { notes.push(a.file.name + ': ' + e.message); }

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Balloni</title>
+<title>בינה יהודית</title>
 <script src="coi-serviceworker.js"></script>
 <script src="config.js"></script>
 <style>
@@ -57,9 +57,9 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 .chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
-<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
+<div id="gate"><h1>🎈 בינה יהודית</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של בינה יהודית, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
-  <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
+  <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>בינה יהודית</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
   <h4>אחרונים</h4><div id="list"></div>
   <div class="foot"><button id="keys">🔑 מפתחות API</button><button id="sv">⬇ שמור שיחה</button><a href="index.html">⬇ הורד מודל</a><button id="out">🚪 התנתק <span id="who"></span></button></div>
@@ -71,11 +71,11 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
   <form id="comp" onsubmit="return false"><div class="card">
     <div id="cards"></div>
     <textarea id="t" placeholder="איך אפשר לעזור לך היום?"></textarea>
-    <div class="row"><button type="button" class="chip" id="att" title="צרף קבצים (או גרור אותם לחלון)">📎</button><input type="file" id="fin" multiple hidden><select class="chip" id="lm" title="איזה מודל יענה"><optgroup label="בענן · בלי הורדה"><option value="c-smart">🧠 יהודי פשוט 1.3 · הכי חכם</option><option value="c-vision">👁 יהודי פשוט 1.2 · רואה תמונות</option><option value="c-code">💻 יהודי פשוט 1.1 · קוד</option><option value="c-fast">⚡ יהודי פשוט 1.0 · מהיר</option></optgroup><optgroup label="בדפדפן · בלי אינטרנט"><option value="big">🚀 יהודי פשוט 0.3 · 3 סוכנים</option><option value="qwen">🧠 יהודי פשוט 0.2 · 3 סוכנים</option><option value="balloni">🎈 יהודי פשוט 0.1 · קטן</option></optgroup></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
+    <div class="row"><button type="button" class="chip" id="att" title="צרף קבצים (או גרור אותם לחלון)">📎</button><input type="file" id="fin" multiple hidden><select class="chip" id="lm" title="איזה מודל יענה"><optgroup label="בענן · בלי הורדה"><option value="c-smart">🧠 בינה יהודית 1.3 · הכי חכם</option><option value="c-vision">👁 בינה יהודית 1.2 · רואה תמונות</option><option value="c-code">💻 בינה יהודית 1.1 · קוד</option><option value="c-fast">⚡ בינה יהודית 1.0 · מהיר</option></optgroup><optgroup label="בדפדפן · בלי אינטרנט"><option value="big">🚀 בינה יהודית 0.3 · 3 סוכנים</option><option value="qwen">🧠 בינה יהודית 0.2 · 3 סוכנים</option><option value="balloni">🎈 בינה יהודית 0.1 · קטן</option></optgroup></select><span class="chip" id="chipT" title="3 סוכנים: מתכנן ← מבצע ← בודק">💬 שיחה רגילה</span><span class="chip" id="chipM" title="חבר מפתח API של ספק חיצוני">🔑</span><button id="send" title="שלח">↑</button></div>
   </div><div id="st">רץ אצלך בדפדפן · בלי שרת · Enter לשליחה, Shift+Enter לשורה חדשה</div></form>
 </main>
 <dialog id="dlg"><b>🔑 חיבור למודל חיצוני (מפתח API)</b>
-<label>ספק</label><select id="pv"><option value="">Balloni מקומי (בלי מפתח, בלי אינטרנט)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="custom">כתובת מותאמת (תואם OpenAI, למשל Ollama / LM Studio)</option></select>
+<label>ספק</label><select id="pv"><option value="">בינה יהודית מקומי (בלי מפתח, בלי אינטרנט)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic (Claude)</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="custom">כתובת מותאמת (תואם OpenAI, למשל Ollama / LM Studio)</option></select>
 <div id="cf"><label>כתובת (https, או http://localhost)</label><input id="pu" dir="ltr" placeholder="https://.../v1/chat/completions"></div>
 <label>מפתח API</label><input id="pk" type="password" dir="ltr" autocomplete="off" placeholder="sk-...">
 <label>שם המודל</label><input id="pm" dir="ltr">
@@ -159,23 +159,23 @@ function renderMd(el, text) {
 function show() { msgs.innerHTML = ''; cur.msgs.forEach(m => addMsg(m.role, m.shown || m.content, m.stats)); document.body.classList.toggle('empty', cur.msgs.length === 0); $('empty').style.display = cur.msgs.length ? 'none' : 'flex'; renderList(); }
 $('new').onclick = () => { cur = { title: '', msgs: [] }; show(); $('side').classList.remove('open'); t.focus(); };
 $('menu').onclick = () => $('side').classList.toggle('open');
-$('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'אני: ' : 'Balloni: ') + m.content).join(String.fromCharCode(10, 10)); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tx], { type: 'text/plain;charset=utf-8' })); a.download = 'balloni-chat.txt'; a.click(); };
+$('sv').onclick = () => { const tx = cur.msgs.map(m => (m.role === 'user' ? 'אני: ' : 'בינה יהודית: ') + m.content).join(String.fromCharCode(10, 10)); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([tx], { type: 'text/plain;charset=utf-8' })); a.download = 'balloni-chat.txt'; a.click(); };
 show();
 
 // Models that run inside the browser. The smart model (Qwen3 1.7B, 1.8GB) is bigger than GitHub Pages allows, so it is read straight
 // from Hugging Face; the browser keeps it in its cache, so only the first visit loads it.
 const MODELS = {
-  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'יהודי פשוט 0.3', smart: true, noThink: true, size: '2.1GB', bytes: 2075618400,
+  big: { url: 'https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q3_K_M.gguf', ctx: 4096, name: 'בינה יהודית 0.3', smart: true, noThink: true, size: '2.1GB', bytes: 2075618400,
          file: 'Qwen3-4B-Instruct-2507-Q3_K_M.gguf',
          check: [[1e8, 'a5b72ce54eaadd3b42843007b4802619'], [1e9, 'e7561f160a3bcc30961ce8b23567cb5d'], [2e9, '3a3f1976b92aa9b1915d36259c465474']] },
-  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'יהודי פשוט 0.2', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf', bytes: 1834426016,
+  qwen: { url: 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf', ctx: 4096, name: 'בינה יהודית 0.2', smart: true, file: 'Qwen3-1.7B-Q8_0.gguf', bytes: 1834426016,
           // bytes of the real file at a few offsets: a saved copy that differs is broken (a cut-off download) and is downloaded again
           check: [[1e8, 'ccfcd5e633aa95d18113091efa14d6e5'], [1e9, '0a012faaf7e0f116052336d9fa05ac54'], [18e8, '30e0ddce7fde1e09d5ff032925b1e2c8']] },
-  balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'יהודי פשוט 0.1', smart: false },
-  'c-smart': { cloud: 'smart', name: 'יהודי פשוט 1.3', smart: true, ctx: 8192 },
-  'c-code': { cloud: 'code', name: 'יהודי פשוט 1.1', smart: true, ctx: 8192 },
-  'c-fast': { cloud: 'fast', name: 'יהודי פשוט 1.0', smart: true, ctx: 8192 },
-  'c-vision': { cloud: 'vision', name: 'יהודי פשוט 1.2', smart: true, ctx: 8192 }
+  balloni: { url: new URL('./model/balloni-00001-of-00002.gguf', location.href).href, ctx: 2048, name: 'בינה יהודית 0.1', smart: false },
+  'c-smart': { cloud: 'smart', name: 'בינה יהודית 1.3', smart: true, ctx: 8192 },
+  'c-code': { cloud: 'code', name: 'בינה יהודית 1.1', smart: true, ctx: 8192 },
+  'c-fast': { cloud: 'fast', name: 'בינה יהודית 1.0', smart: true, ctx: 8192 },
+  'c-vision': { cloud: 'vision', name: 'בינה יהודית 1.2', smart: true, ctx: 8192 }
 };
 let lm = 'c-smart'; try { lm = localStorage.getItem('balloni-lm3') || 'c-smart'; } catch {} if (!MODELS[lm]) lm = 'c-smart';
 let team = false; try { team = localStorage.getItem('balloni-team') === '1'; } catch {}
@@ -208,7 +208,7 @@ async function loadModel() {
     }
     if (my !== loading) return;
     $('stt').textContent = 'מוכן · ' + M.name + ' רץ אצלך בדפדפן'; $('dot').className = 'ok'; ready = true; t.focus(); if (t.value.trim() && typeof send === 'function') send();
-  } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את Balloni הקטן' : ''); }
+  } catch (e) { if (my === loading) $('stt').textContent = 'שגיאה בטעינת המודל: ' + e.message + (M.smart ? ' · אפשר לבחור את בינה יהודית הקטן' : ''); }
 }
 async function hasSaved(M) {
   try {

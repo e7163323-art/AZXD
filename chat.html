@@ -26,7 +26,7 @@ main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
 #menu{display:none;background:none;border:0;font-size:1.4rem;color:var(--fg);cursor:pointer}
 #log{flex:1;overflow:auto;padding:8px 18px 190px}
 .col{max-width:780px;margin:0 auto}
-.m{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;line-height:1.7}.code{border:1px solid #8884;border-radius:10px;margin:8px 0;overflow:hidden;direction:ltr;text-align:left;white-space:normal}.cbar{display:flex;gap:8px;align-items:center;padding:4px 10px;background:#8882;font-size:12px}.cbar span{flex:1}.cbar a{cursor:pointer;text-decoration:underline}.code pre{margin:0;padding:10px;overflow:auto;max-height:420px;font:13px/1.5 Consolas,monospace;white-space:pre}
+.m{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;line-height:1.7}details.think{border-inline-start:3px solid #8886;padding:2px 10px;margin:4px 0 8px;color:#888;font-size:.9em;white-space:pre-wrap}details.think summary{cursor:pointer;user-select:none}.code{border:1px solid #8884;border-radius:10px;margin:8px 0;overflow:hidden;direction:ltr;text-align:left;white-space:normal}.cbar{display:flex;gap:8px;align-items:center;padding:4px 10px;background:#8882;font-size:12px}.cbar span{flex:1}.cbar a{cursor:pointer;text-decoration:underline}.code pre{margin:0;padding:10px;overflow:auto;max-height:420px;font:13px/1.5 Consolas,monospace;white-space:pre}
 .u{background:var(--elev);padding:10px 16px;border-radius:18px;width:fit-content;max-width:85%}
 .meta{color:var(--mut);font-size:.78rem;margin-top:-6px;display:flex;gap:14px}
 .meta a{cursor:pointer}
@@ -118,9 +118,16 @@ function addMsg(role, text, stats) {
   if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.dataset.raw || d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }
   log.scrollTop = log.scrollHeight; return d;
 }
+function thinkBlock(el, text) {
+  const m = /<think>([\s\S]*?)(<\/think>|$)/.exec(text); if (!m) return text;
+  const det = document.createElement('details'); det.className = 'think'; if (!m[2]) det.open = true;
+  const sm = document.createElement('summary'); sm.textContent = m[2] ? '💭 הצג את צורת החשיבה' : '💭 חושב…';
+  const b = document.createElement('div'); b.textContent = m[1].trim(); det.appendChild(sm); det.appendChild(b); el.appendChild(det);
+  return text.replace(m[0], '');
+}
 function renderMd(el, text) {
   el.dataset.raw = text; el.textContent = '';
-  String(text).split('```').forEach((p, i) => {
+  thinkBlock(el, String(text)).split('```').forEach((p, i) => {
     if (i % 2 === 0) { const t = p.replace(/^\n+|\n+$/g, ''); if (t) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } return; }
     const nl = p.indexOf('\n'), lang = nl > 0 ? p.slice(0, nl).trim() : '', code = nl > 0 ? p.slice(nl + 1) : p;
     const box = document.createElement('div'); box.className = 'code';
@@ -424,10 +431,10 @@ async function send() {
     if (prov) await remoteChat(cur.msgs.slice(-12).map(m => ({ role: m.role, content: m.content })), x => { acc += x; n++; out.textContent = acc; log.scrollTop = log.scrollHeight; });
     else if (team && MODELS[lm].smart) { acc = await teamChat(text, out); n = acc.length / 3; }
     else {
-      const hist = cur.msgs.slice(-8).map(m => ({ role: m.role, content: m.content }));
-      if (MODELS[lm].smart) hist.unshift({ role: 'system', content: 'אתה עוזר שמדבר עברית רגילה וטבעית. ענה קצר וענייני על מה שנשאלת. כשמבקשים קוד - כתוב קוד שלם ועובד.' });
-      acc = await gen(hist, MODELS[lm].smart ? 800 : 300, 0.7, false, x => { n++; out.textContent = x; log.scrollTop = log.scrollHeight; });
-      out.textContent = acc;
+      const hist = cur.msgs.slice(-8).map(m => ({ role: m.role, content: String(m.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim() }));
+      if (MODELS[lm].smart) hist.unshift({ role: 'system', content: 'אתה עוזר שמדבר עברית רגילה וטבעית. ענה קצר וענייני על מה שנשאלת. כשמבקשים קוד - כתוב קוד שלם ועובד.' + (MODELS[lm].cloud ? ' לפני התשובה חשוב בקצרה בתוך <think>...</think> (עד 5 שורות, בעברית: מה הבנת ואיך תענה), ואחרי זה כתוב את התשובה עצמה.' : '') });
+      acc = await gen(hist, MODELS[lm].smart ? 800 : 300, 0.7, false, x => { n++; renderMd(out, x); log.scrollTop = log.scrollHeight; });
+      renderMd(out, acc);
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   clearInterval(tmi); tm.remove();

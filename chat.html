@@ -57,7 +57,7 @@ dialog .btns .p{background:var(--acc);color:#fff;border:0}dialog small{color:var
 .chip{cursor:pointer}select.chip{appearance:none;-webkit-appearance:none}.m .ag{color:var(--mut);font-size:.85rem;white-space:pre-wrap;margin-bottom:8px}
 @media(max-width:760px){aside{position:fixed;inset:0 0 0 auto;z-index:5;transform:translateX(100%);transition:.2s}aside.open{transform:none}#menu{display:block}}
 </style></head><body class="empty">
-<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
+<div id="gate"><h1>🎈 Balloni</h1><p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p><a href="signin.html" style="background:#e5484d;color:#fff;text-decoration:none;padding:10px 26px;border-radius:10px">התחבר עם Google</a></div>
 <aside id="side">
   <div class="logo"><svg viewBox="0 0 26 32"><ellipse cx="13" cy="12" rx="10" ry="12" fill="#e5484d"/><ellipse cx="9" cy="8" rx="3" ry="4" fill="#fff" opacity=".35"/><path d="M13 24l-2.5 3h5z" fill="#e5484d"/><path d="M13 27c-3 2 3 3 0 5" stroke="#999" fill="none"/></svg>Balloni</div>
   <button class="nb" id="new">＋ &nbsp;חדש</button>
@@ -196,7 +196,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 // ---- Google sign-in gate. The ID token is checked here (audience, issuer, expiry, verified email); the session is kept 30 days in this browser.
 const DAY = 864e5;
 function b64json(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(s + '==='.slice((s.length + 3) % 4))))); }
-function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId && 'sess' in u ? u : null; } catch { return null; } }
+function session() { try { const u = JSON.parse(localStorage.getItem('balloni-user') || 'null'); return u && u.until > Date.now() && u.aud === window.BALLONI.googleClientId && 'sess' in u && u.ack === 1 ? u : null; } catch { return null; } }
 function signedIn(u) { document.body.classList.add('signed'); $('who').textContent = '(' + u.email + ')'; if (!wllama && !loading) loadModel(); syncQuota(0); cloud('get'); }
 $('out').onclick = () => { try { localStorage.removeItem('balloni-user'); } catch {} location.reload(); };
 (function gate() { const u = session(); if (u) signedIn(u); })();

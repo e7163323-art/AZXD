@@ -12,7 +12,7 @@ h1{margin:0;font-weight:500}p{color:var(--mut);margin:0;max-width:420px;line-hei
 <script src="config.js"></script>
 </head><body>
 <h1>🎈 Balloni</h1>
-<p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.</p>
+<p>כדי לדבר עם הבינה צריך להתחבר עם Google.<br>שום סיסמה לא עוברת דרכנו. השיחות נשמרות בחשבון שלך בשרת של Balloni, כדי שיופיעו גם בתוכנה ובמחשבים אחרים.<br>השיחות עשויות להיבדק על ידי מנהל השירות רק כדי לשפר את המודל ולחסום שימוש לרעה. בהתחברות אתה מסכים לכך.</p>
 <div id="gbtn"></div><div id="err"></div>
 <script>
 const DAY = 864e5, $ = id => document.getElementById(id);
@@ -22,8 +22,8 @@ async function onGoogle(resp) {
     const p = b64json(resp.credential.split('.')[1]);
     if (p.aud !== window.BALLONI.googleClientId || !['accounts.google.com', 'https://accounts.google.com'].includes(p.iss) || !(p.exp * 1000 > Date.now()) || p.email_verified !== true) throw new Error('bad');
     let sess = '';
-    try { const r = await fetch(window.BALLONI.api + '/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: resp.credential }) }); const d = await r.json(); sess = d.session || ''; } catch {}
-    localStorage.setItem('balloni-user', JSON.stringify({ email: p.email, aud: p.aud, until: Date.now() + 30 * DAY, sess }));
+    try { const r = await fetch(window.BALLONI.api + '/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: resp.credential, notice: 1 }) }); const d = await r.json(); sess = d.session || ''; } catch {}
+    localStorage.setItem('balloni-user', JSON.stringify({ email: p.email, aud: p.aud, until: Date.now() + 30 * DAY, sess, ack: 1 }));
     location.replace('chat.html');
   } catch { $('err').textContent = 'ההתחברות נכשלה, נסה שוב.'; }
 }

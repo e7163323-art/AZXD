@@ -15,7 +15,7 @@ aside{width:272px;background:var(--side);display:flex;flex-direction:column;padd
 .nb:hover{filter:brightness(.97)}
 aside h4{color:var(--mut);font-weight:400;font-size:.8rem;margin:14px 8px 4px}
 #list{flex:1;overflow:auto;display:flex;flex-direction:column;gap:2px}
-#list div{padding:9px 12px;border-radius:10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}
+#list div{flex-shrink:0;padding:9px 12px;border-radius:10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92rem}
 #list div.on,#list div:hover{background:var(--elev)}
 .foot{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--bd);padding-top:10px}
 .foot a,.foot button{color:var(--mut);text-decoration:none;font-size:.88rem;padding:6px 10px;border-radius:8px;background:none;border:0;font-family:inherit;text-align:start;cursor:pointer}
@@ -26,7 +26,7 @@ main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
 #menu{display:none;background:none;border:0;font-size:1.4rem;color:var(--fg);cursor:pointer}
 #log{flex:1;overflow:auto;padding:8px 18px 190px}
 .col{max-width:780px;margin:0 auto}
-.m{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;line-height:1.7}
+.m{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;line-height:1.7}.code{border:1px solid #8884;border-radius:10px;margin:8px 0;overflow:hidden;direction:ltr;text-align:left;white-space:normal}.cbar{display:flex;gap:8px;align-items:center;padding:4px 10px;background:#8882;font-size:12px}.cbar span{flex:1}.cbar a{cursor:pointer;text-decoration:underline}.code pre{margin:0;padding:10px;overflow:auto;max-height:420px;font:13px/1.5 Consolas,monospace;white-space:pre}
 .u{background:var(--elev);padding:10px 16px;border-radius:18px;width:fit-content;max-width:85%}
 .meta{color:var(--mut);font-size:.78rem;margin-top:-6px;display:flex;gap:14px}
 .meta a{cursor:pointer}
@@ -114,9 +114,21 @@ async function cloud(op) {
 }
 function renderList() { const l = $('list'); l.innerHTML = ''; chats.forEach(c => { const d = document.createElement('div'); d.textContent = c.title || 'שיחה חדשה'; if (c === cur) d.className = 'on'; d.onclick = () => { cur = c; show(); $('side').classList.remove('open'); }; l.appendChild(d); }); }
 function addMsg(role, text, stats) {
-  const d = document.createElement('div'); d.className = 'm' + (role === 'user' ? ' u' : ''); d.textContent = text; msgs.appendChild(d);
-  if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }
+  const d = document.createElement('div'); d.className = 'm' + (role === 'user' ? ' u' : ''); if (role === 'user') d.textContent = text; else renderMd(d, text || ''); msgs.appendChild(d);
+  if (role !== 'user') { const m = document.createElement('div'); m.className = 'meta'; const a = document.createElement('a'); a.textContent = 'העתק'; a.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(d.dataset.raw || d.textContent); a.textContent = 'הועתק'; }; m.appendChild(a); if (stats) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } msgs.appendChild(m); }
   log.scrollTop = log.scrollHeight; return d;
+}
+function renderMd(el, text) {
+  el.dataset.raw = text; el.textContent = '';
+  String(text).split('```').forEach((p, i) => {
+    if (i % 2 === 0) { const t = p.replace(/^\n+|\n+$/g, ''); if (t) { const d = document.createElement('div'); d.textContent = t; el.appendChild(d); } return; }
+    const nl = p.indexOf('\n'), lang = nl > 0 ? p.slice(0, nl).trim() : '', code = nl > 0 ? p.slice(nl + 1) : p;
+    const box = document.createElement('div'); box.className = 'code';
+    const bar = document.createElement('div'); bar.className = 'cbar'; const lb = document.createElement('span'); lb.textContent = lang || 'code'; bar.appendChild(lb);
+    const cp = document.createElement('a'); cp.textContent = 'העתק'; cp.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(code); cp.textContent = 'הועתק ✓'; }; bar.appendChild(cp);
+    if (/html/i.test(lang) || /<html|<!doctype/i.test(code)) { const dl = document.createElement('a'); dl.textContent = 'הורד כקובץ'; dl.onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code], { type: 'text/html' })); a.download = 'balloni-page.html'; a.click(); }; bar.appendChild(dl); }
+    const pre = document.createElement('pre'); pre.textContent = code; box.appendChild(bar); box.appendChild(pre); el.appendChild(box);
+  });
 }
 function show() { msgs.innerHTML = ''; cur.msgs.forEach(m => addMsg(m.role, m.shown || m.content, m.stats)); document.body.classList.toggle('empty', cur.msgs.length === 0); $('empty').style.display = cur.msgs.length ? 'none' : 'flex'; renderList(); }
 $('new').onclick = () => { cur = { title: '', msgs: [] }; show(); $('side').classList.remove('open'); t.focus(); };
@@ -389,6 +401,7 @@ async function send() {
     }
   } catch (e) { out.textContent = 'שגיאה: ' + e.message; }
   clearInterval(tmi); tm.remove();
+  if (acc && !out.querySelector('.ag')) renderMd(out, acc);
   if (acc) { const stats = secs() + ' · ' + (n / ((performance.now() - t0) / 1000)).toFixed(1) + ' טוקנים/שנייה'; cur.msgs.push({ role: 'assistant', content: acc, stats }); const m = out.nextSibling; if (m) { const s = document.createElement('span'); s.textContent = stats; m.appendChild(s); } }
   else if (!/^שגיאה/.test(out.textContent)) { cur.msgs.pop(); out.remove(); }
   else cur.msgs.pop();
